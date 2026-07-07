@@ -1,0 +1,27 @@
+# planning / working notes — LOCAL ONLY, never published
+.scratch/
+
+# env
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+dist/
+build/
+
+# node / FE
+node_modules/
+.vite/
+
+# os / editor
+.DS_Store
+.idea/
+CLAUDE.md
+**/CLAUDE.md
