@@ -12,9 +12,7 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from renderers import gpay, paytm, phonepe  # noqa: E402
+from .renderers import gpay, paytm, phonepe
 
 RENDERERS = {"phonepe": phonepe.render, "paytm": paytm.render, "gpay": gpay.render}
 

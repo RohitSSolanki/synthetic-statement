@@ -18,6 +18,33 @@ rent), and real statements can't be shared (PII). This generates statements that
 proportionally realistic** — so anything that consumes bank/UPI statements (parsers, budgeting tools,
 categorizers, dashboards) can be built and demoed against data that behaves like the real thing.
 
+## Install
+
+```bash
+pip install "git+https://github.com/RohitSSolanki/synthetic-statement@main"   # or pin a commit/tag
+pip install "synthetic-statement[pdf] @ git+https://github.com/RohitSSolanki/synthetic-statement@main"  # + PDF rendering
+```
+
+The generator core is pure standard library (no runtime deps); the optional `[pdf]` extra pulls
+`reportlab` for the PDF renderers. Determinism is guaranteed: a fixed `--seed` yields byte-identical
+JSON for the same options, so a consumer can commit a stable fixture and diff refreshes cleanly.
+
+## Usage
+
+```bash
+# console script (installed) — or `python -m synthetic_statement …`
+synthetic-statement --yes --seed 42 --profile family-expense --output-dir out
+```
+
+```python
+from synthetic_statement import statement_generator
+statement_generator.main(["--yes", "--seed", "42", "--output-dir", "out"])
+```
+
+Writes `statement.json` (structured records), `statement.csv`, and `meta.json` (version/seed/options
+provenance) into the output dir. See `synthetic-statement --help` for currency, date range, income/
+expense, bank and profile options.
+
 ## What's inside (planned)
 
 - **Generator core** — a library with a clean `options → statement` API (seeded/deterministic).
@@ -30,7 +57,8 @@ categorizers, dashboards) can be built and demoed against data that behaves like
 
 ## Status
 
-Scaffold. Code is being migrated in; see the local `.scratch/` for the design and roadmap.
+Working + `pip install`-able: the generator, renderers, and verifier run, with deterministic seeded
+output. Catalog/realism tuning is ongoing; a clean `options → statement` library API is on the roadmap.
 
 ## License
 

@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "synthetic-statement"
+version = "0.1.0"
+description = "Generate realistic synthetic bank & UPI statements as JSON or PDF, for testing, demos, and development."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Rohit Solanki" }]
+requires-python = ">=3.10"
+keywords = ["synthetic-data", "bank-statement", "upi", "test-fixtures", "fake-data", "categorization"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing",
+]
+# The generator core is pure standard library — no runtime dependencies.
+dependencies = []
+
+[project.optional-dependencies]
+pdf = ["reportlab>=4.0"] # PDF rendering (renderers/) only
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+synthetic-statement = "synthetic_statement.statement_generator:main"
+
+[project.urls]
+Homepage = "https://github.com/RohitSSolanki/synthetic-statement"
+Repository = "https://github.com/RohitSSolanki/synthetic-statement"
+
+[tool.setuptools]
+# Explicit package list — keep tests/ and fixtures/ out of the distribution.
+packages = ["synthetic_statement", "synthetic_statement.renderers"]

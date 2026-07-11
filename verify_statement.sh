@@ -9,4 +9,4 @@ if [[ ! -x "$PYTHON_BIN" ]]; then
   exit 1
 fi
 
-exec "$PYTHON_BIN" "$SCRIPT_DIR/verify_statement.py" "$@"
+exec env PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON_BIN" -m synthetic_statement.verify_statement "$@"
