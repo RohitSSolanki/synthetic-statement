@@ -35,3 +35,7 @@ Repository = "https://github.com/RohitSSolanki/synthetic-statement"
 [tool.setuptools]
 # Explicit package list — keep tests/ and fixtures/ out of the distribution.
 packages = ["synthetic_statement", "synthetic_statement.renderers"]
+
+[tool.setuptools.package-data]
+# Ship the versioned catalog data inside the wheel (needed at runtime, incl. Pyodide).
+synthetic_statement = ["data/*.json"]

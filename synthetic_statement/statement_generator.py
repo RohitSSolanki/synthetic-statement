@@ -18,122 +18,43 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 
-MERCHANTS = [
-    "Amazon India",
-    "Flipkart",
-    "Swiggy",
-    "Zomato",
-    "BigBasket",
-    "Blinkit",
-    "Zepto",
-    "Uber",
-    "Ola",
-    "MakeMyTrip",
-    "IRCTC",
-    "Ajio",
-    "Myntra",
-    "Tata 1mg",
-    "Apollo Pharmacy",
-    "Reliance Digital",
-    "Croma",
-    "Decathlon",
-    "BookMyShow",
-    "Netflix",
-    "Spotify",
-    "Prime Video",
-    "Hotstar",
-    "Jio",
-    "Airtel",
-    "Vodafone Idea",
-    "DMart",
-    "Nike",
-    "Adidas",
-    "H&M",
-    "Pepperfry",
-    "Urban Company",
-    "Lenskart",
-    "NoBroker",
-    "PVR Cinemas",
-    "Shell",
-    "HP Petrol",
-    "IndianOil",
-    "SBI Card",
-    "ICICI Bank",
-    "HDFC Bank",
-    "Axis Bank",
-    "Bajaj Finance",
-    "Tanishq",
-    "Titan",
-    "Westside",
-    "Fabindia",
-    "IKEA",
-    "Swastik Travels",
-    "Cloud Kitchen",
-]
+def _load_catalog() -> dict:
+    """Load the versioned, region-keyed catalog (merchants / persons / employers).
+
+    Data lives in ``synthetic_statement/data/catalog.json`` — adding a merchant,
+    name or employer is a data edit. The default region (``in``) reproduces the
+    previous hard-coded lists byte-for-byte; other regions (e.g. ``us``) are
+    dormant until a country option selects them (roadmap task 04).
+    """
+    from importlib.resources import files
+
+    text = (files("synthetic_statement") / "data" / "catalog.json").read_text(encoding="utf-8")
+    return json.loads(text)
+
+
+_CATALOG = _load_catalog()
+_REGION = _CATALOG["regions"][_CATALOG["default_region"]]
+
+# Merchant draw pool — order preserved so seeded draws stay byte-stable.
+MERCHANTS = [_m["name"] for _m in _REGION["merchants"]]
+
+# name -> category classifier; group iteration order sets _group_merchant
+# precedence (a merchant may belong to several categories).
+MERCHANT_GROUPS = {
+    _cat: tuple(_m["name"] for _m in _REGION["merchants"] if _cat in _m["categories"])
+    for _cat in _REGION["categories"]
+}
+
+# Generic person pool for P2P / UPI transfers.
+FIRST_NAMES = _REGION["persons"]["first_names"]
+LAST_NAMES = _REGION["persons"]["last_names"]
 
 # Employers for the monthly salary inflow. Unlike a P2P credit (a person name),
-# a salary credit carries a company name PLUS a "SALARY" token so the backend
-# categorization engine can separate income from peer transfers / refunds — the
-# stable signal in real statements is the token, not the (user-specific) payer.
-COMPANIES = [
-    "Infosys",
-    "TCS",
-    "Wipro",
-    "HCL Technologies",
-    "Tech Mahindra",
-    "Accenture India",
-    "Cognizant",
-    "Capgemini India",
-    "Reliance Industries",
-    "Tata Consultancy",
-]
-SALARY_TOKEN = "SALARY"
-
-FIRST_NAMES = [
-    "Aarav",
-    "Aanya",
-    "Aditya",
-    "Ananya",
-    "Arjun",
-    "Diya",
-    "Ishaan",
-    "Kavya",
-    "Krish",
-    "Meera",
-    "Nisha",
-    "Rahul",
-    "Riya",
-    "Saanvi",
-    "Siddharth",
-    "Tanya",
-    "Vihaan",
-    "Varun",
-    "Yash",
-    "Zoya",
-]
-
-LAST_NAMES = [
-    "Sharma",
-    "Verma",
-    "Gupta",
-    "Mehta",
-    "Iyer",
-    "Reddy",
-    "Nair",
-    "Kapoor",
-    "Singh",
-    "Chopra",
-    "Patel",
-    "Bose",
-    "Pillai",
-    "Joshi",
-    "Malhotra",
-    "Khan",
-    "Das",
-    "Saxena",
-    "Kulkarni",
-    "Bhatia",
-]
+# a salary credit carries a company name PLUS a token (e.g. "SALARY") so the
+# backend categorization engine can separate income from peer transfers /
+# refunds — the stable signal in real statements is the token, not the payer.
+COMPANIES = _REGION["employers"]["companies"]
+SALARY_TOKEN = _REGION["employers"]["salary_token"]
 
 ACCOUNT_BANKS = [
     "HDFC Bank",
@@ -156,48 +77,6 @@ BANK_HEADER_TEMPLATES = {
 }
 
 BANK_INPUTS = ACCOUNT_BANKS + ["random"]
-
-MERCHANT_GROUPS = {
-    "groceries": ("BigBasket", "Blinkit", "Zepto", "DMart"),
-    "food": ("Swiggy", "Zomato", "Cloud Kitchen"),
-    "transport": ("Uber", "Ola", "IRCTC", "MakeMyTrip", "Swastik Travels"),
-    "shopping": (
-        "Amazon India",
-        "Flipkart",
-        "Ajio",
-        "Myntra",
-        "Nike",
-        "Adidas",
-        "H&M",
-        "Pepperfry",
-        "Urban Company",
-        "Westside",
-        "Fabindia",
-        "IKEA",
-    ),
-    "bills": (
-        "Jio",
-        "Airtel",
-        "Vodafone Idea",
-        "SBI Card",
-        "ICICI Bank",
-        "HDFC Bank",
-        "Axis Bank",
-        "Bajaj Finance",
-    ),
-    "health": ("Tata 1mg", "Apollo Pharmacy", "Lenskart"),
-    "fuel": ("Shell", "HP Petrol", "IndianOil"),
-    "entertainment": (
-        "BookMyShow",
-        "Netflix",
-        "Spotify",
-        "Prime Video",
-        "Hotstar",
-        "PVR Cinemas",
-    ),
-    "finance": ("SBI Card", "ICICI Bank", "HDFC Bank", "Axis Bank", "Bajaj Finance"),
-    "other": ("Reliance Digital", "Croma", "Decathlon", "NoBroker", "Tanishq", "Titan"),
-}
 
 DEFAULT_MONTHLY_INCOME = 120000.0
 DEFAULT_MONTHLY_EXPENSE = 90000.0

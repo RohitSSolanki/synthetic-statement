@@ -1,0 +1,904 @@
+{
+  "version": 1,
+  "default_region": "in",
+  "regions": {
+    "in": {
+      "label": "India",
+      "currency": "INR",
+      "categories": [
+        "groceries",
+        "food",
+        "transport",
+        "shopping",
+        "bills",
+        "health",
+        "fuel",
+        "entertainment",
+        "finance",
+        "other"
+      ],
+      "merchants": [
+        {
+          "name": "Amazon India",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Flipkart",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Swiggy",
+          "categories": [
+            "food"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Zomato",
+          "categories": [
+            "food"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "BigBasket",
+          "categories": [
+            "groceries"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Blinkit",
+          "categories": [
+            "groceries"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Zepto",
+          "categories": [
+            "groceries"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Uber",
+          "categories": [
+            "transport"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Ola",
+          "categories": [
+            "transport"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "MakeMyTrip",
+          "categories": [
+            "transport"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "IRCTC",
+          "categories": [
+            "transport"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Ajio",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Myntra",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Tata 1mg",
+          "categories": [
+            "health"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Apollo Pharmacy",
+          "categories": [
+            "health"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Reliance Digital",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Croma",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Decathlon",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "BookMyShow",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Netflix",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Spotify",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Prime Video",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Hotstar",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Jio",
+          "categories": [
+            "bills"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Airtel",
+          "categories": [
+            "bills"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Vodafone Idea",
+          "categories": [
+            "bills"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "DMart",
+          "categories": [
+            "groceries"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Nike",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Adidas",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "H&M",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Pepperfry",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Urban Company",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Lenskart",
+          "categories": [
+            "health"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "NoBroker",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "PVR Cinemas",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Shell",
+          "categories": [
+            "fuel"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "HP Petrol",
+          "categories": [
+            "fuel"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "IndianOil",
+          "categories": [
+            "fuel"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "SBI Card",
+          "categories": [
+            "bills",
+            "finance"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "ICICI Bank",
+          "categories": [
+            "bills",
+            "finance"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "HDFC Bank",
+          "categories": [
+            "bills",
+            "finance"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Axis Bank",
+          "categories": [
+            "bills",
+            "finance"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Bajaj Finance",
+          "categories": [
+            "bills",
+            "finance"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Tanishq",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Titan",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Westside",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Fabindia",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "IKEA",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Swastik Travels",
+          "categories": [
+            "transport"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Cloud Kitchen",
+          "categories": [
+            "food"
+          ],
+          "aliases": []
+        }
+      ],
+      "persons": {
+        "first_names": [
+          "Aarav",
+          "Aanya",
+          "Aditya",
+          "Ananya",
+          "Arjun",
+          "Diya",
+          "Ishaan",
+          "Kavya",
+          "Krish",
+          "Meera",
+          "Nisha",
+          "Rahul",
+          "Riya",
+          "Saanvi",
+          "Siddharth",
+          "Tanya",
+          "Vihaan",
+          "Varun",
+          "Yash",
+          "Zoya"
+        ],
+        "last_names": [
+          "Sharma",
+          "Verma",
+          "Gupta",
+          "Mehta",
+          "Iyer",
+          "Reddy",
+          "Nair",
+          "Kapoor",
+          "Singh",
+          "Chopra",
+          "Patel",
+          "Bose",
+          "Pillai",
+          "Joshi",
+          "Malhotra",
+          "Khan",
+          "Das",
+          "Saxena",
+          "Kulkarni",
+          "Bhatia"
+        ]
+      },
+      "employers": {
+        "companies": [
+          "Infosys",
+          "TCS",
+          "Wipro",
+          "HCL Technologies",
+          "Tech Mahindra",
+          "Accenture India",
+          "Cognizant",
+          "Capgemini India",
+          "Reliance Industries",
+          "Tata Consultancy"
+        ],
+        "salary_token": "SALARY"
+      }
+    },
+    "us": {
+      "label": "United States",
+      "currency": "USD",
+      "categories": [
+        "groceries",
+        "food",
+        "transport",
+        "shopping",
+        "bills",
+        "health",
+        "fuel",
+        "entertainment",
+        "finance",
+        "other"
+      ],
+      "merchants": [
+        {
+          "name": "Walmart",
+          "categories": [
+            "groceries"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Kroger",
+          "categories": [
+            "groceries"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Costco",
+          "categories": [
+            "groceries"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Trader Joe's",
+          "categories": [
+            "groceries"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Whole Foods Market",
+          "categories": [
+            "groceries"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Safeway",
+          "categories": [
+            "groceries"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "DoorDash",
+          "categories": [
+            "food"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Uber Eats",
+          "categories": [
+            "food"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Grubhub",
+          "categories": [
+            "food"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Chipotle",
+          "categories": [
+            "food"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Starbucks",
+          "categories": [
+            "food"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "McDonald's",
+          "categories": [
+            "food"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Uber",
+          "categories": [
+            "transport"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Lyft",
+          "categories": [
+            "transport"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Delta Air Lines",
+          "categories": [
+            "transport"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Amtrak",
+          "categories": [
+            "transport"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Hertz",
+          "categories": [
+            "transport"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Amazon",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Target",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Best Buy",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Nike",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Macy's",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Apple Store",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Nordstrom",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "IKEA",
+          "categories": [
+            "shopping"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Verizon",
+          "categories": [
+            "bills"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "AT&T",
+          "categories": [
+            "bills"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "T-Mobile",
+          "categories": [
+            "bills"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Comcast Xfinity",
+          "categories": [
+            "bills"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Spectrum",
+          "categories": [
+            "bills"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "PG&E",
+          "categories": [
+            "bills"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "CVS Pharmacy",
+          "categories": [
+            "health"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Walgreens",
+          "categories": [
+            "health"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Rite Aid",
+          "categories": [
+            "health"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Warby Parker",
+          "categories": [
+            "health"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Shell",
+          "categories": [
+            "fuel"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Chevron",
+          "categories": [
+            "fuel"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "ExxonMobil",
+          "categories": [
+            "fuel"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "BP",
+          "categories": [
+            "fuel"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Netflix",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Spotify",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Hulu",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Disney+",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "AMC Theatres",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Ticketmaster",
+          "categories": [
+            "entertainment"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Chase",
+          "categories": [
+            "finance"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Bank of America",
+          "categories": [
+            "finance"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Wells Fargo",
+          "categories": [
+            "finance"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "American Express",
+          "categories": [
+            "finance"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Capital One",
+          "categories": [
+            "finance"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "The Home Depot",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Lowe's",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Etsy",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "GameStop",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        },
+        {
+          "name": "Petco",
+          "categories": [
+            "other"
+          ],
+          "aliases": []
+        }
+      ],
+      "persons": {
+        "first_names": [
+          "James",
+          "Mary",
+          "Robert",
+          "Patricia",
+          "John",
+          "Jennifer",
+          "Michael",
+          "Linda",
+          "David",
+          "Elizabeth",
+          "William",
+          "Barbara",
+          "Richard",
+          "Susan",
+          "Joseph",
+          "Jessica",
+          "Thomas",
+          "Sarah",
+          "Christopher",
+          "Karen"
+        ],
+        "last_names": [
+          "Smith",
+          "Johnson",
+          "Williams",
+          "Brown",
+          "Jones",
+          "Garcia",
+          "Miller",
+          "Davis",
+          "Rodriguez",
+          "Martinez",
+          "Hernandez",
+          "Lopez",
+          "Gonzalez",
+          "Wilson",
+          "Anderson",
+          "Thomas",
+          "Taylor",
+          "Moore",
+          "Jackson",
+          "Martin"
+        ]
+      },
+      "employers": {
+        "companies": [
+          "Google",
+          "Microsoft",
+          "Amazon",
+          "Apple",
+          "Meta",
+          "JPMorgan Chase",
+          "Walmart",
+          "Boeing",
+          "Ford Motor",
+          "Deloitte"
+        ],
+        "salary_token": "PAYROLL"
+      }
+    }
+  }
+}
