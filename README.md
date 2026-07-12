@@ -50,6 +50,13 @@ persists the three files, with `meta.json` recording version/seed/options proven
 **byte-identical** output. The CLI is a thin caller of the same path — see `synthetic-statement --help` for
 date range, income/expense, bank and profile options.
 
+## Statement format
+
+The emitted formats — the surface a downstream parser sees — are documented in
+[`spec/format-spec.md`](spec/format-spec.md), with a machine-readable JSON Schema at
+[`spec/statement.schema.json`](spec/statement.schema.json). A consumer can build a parser for any layout
+(JSON / CSV / the PhonePe / Paytm / GPay PDFs) from the spec alone.
+
 ## What's inside (planned)
 
 - **Generator core** — a library with a clean `options → statement` API (seeded/deterministic).

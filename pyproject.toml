@@ -23,7 +23,7 @@ dependencies = []
 
 [project.optional-dependencies]
 pdf = ["reportlab>=4.0"] # PDF rendering (renderers/) only
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "jsonschema>=4.0"] # jsonschema: validate output against spec/statement.schema.json
 
 [project.scripts]
 synthetic-statement = "synthetic_statement.statement_generator:main"

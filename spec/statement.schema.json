@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/RohitSSolanki/synthetic-statement/spec/statement.schema.json",
+  "title": "Synthetic statement — records array",
+  "description": "The structured JSON emitted by synthetic-statement (statement.json / Statement.to_json()): a top-level array of canonical transaction records. Spec version 1.0 (tracks statement_generator.GENERATOR_VERSION).",
+  "type": "array",
+  "items": { "$ref": "#/$defs/record" },
+  "$defs": {
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["date", "time", "Transaction Detail", "type", "amount"],
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "description": "Transaction date, ISO 8601 (YYYY-MM-DD)."
+        },
+        "time": {
+          "type": "string",
+          "pattern": "^[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+          "description": "Transaction time, 24-hour HH:MM:SS."
+        },
+        "Transaction Detail": {
+          "type": "array",
+          "description": "Fixed 4-line detail block: [counterparty line, transaction id, UTR, account line].",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            {
+              "type": "string",
+              "pattern": "^(Paid to |Received from ).+",
+              "description": "Direction + counterparty. 'Paid to <name>' (debit) or 'Received from <name>' (credit)."
+            },
+            {
+              "type": "string",
+              "pattern": "^Transaction ID: TXN[0-9]+$"
+            },
+            {
+              "type": "string",
+              "pattern": "^UTR No\\.: UTR[0-9]+$"
+            },
+            {
+              "type": "string",
+              "pattern": "^(Paid by |Credited to ).+",
+              "description": "Account line. 'Paid by <account>' (debit) or 'Credited to <account>' (credit); account reads '<Bank> A/C XX<4 digits>'."
+            }
+          ],
+          "items": false
+        },
+        "type": {
+          "enum": ["debit", "credit"],
+          "description": "Direction. Redundant with the detail verbs but explicit for consumers."
+        },
+        "amount": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Positive transaction amount in the region currency (major units, e.g. INR)."
+        }
+      }
+    }
+  }
+}
