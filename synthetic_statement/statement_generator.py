@@ -1,4 +1,4 @@
-"""Synthetic statement generator for dummy UPI / bank statement records.
+"""Synthetic statement generator for UPI / bank statement records.
 
 The generator emits one canonical in-memory record set and serializes it to
 both CSV and JSON so the two outputs always stay in sync.

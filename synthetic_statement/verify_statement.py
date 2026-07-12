@@ -1,4 +1,4 @@
-"""Validate a generated dummy statement folder.
+"""Validate a generated synthetic statement folder.
 
 The checker compares CSV and JSON row-for-row, confirms the date window, and
 applies a few mix heuristics so the output stays useful as a synthetic bank
@@ -98,7 +98,7 @@ def _profile_thresholds(profile: str) -> dict[str, float]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Validate a generated dummy statement folder.")
+    parser = argparse.ArgumentParser(description="Validate a generated synthetic statement folder.")
     parser.add_argument("output_dir", help="Folder containing statement.csv and statement.json")
     parser.add_argument("--range", dest="date_range", help="Expected date range START:END")
     parser.add_argument("--start", help="Expected start date, YYYY-MM-DD")
