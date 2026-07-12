@@ -26,6 +26,10 @@ def _build(opts_json):
         kw["profile"] = o["profile"]
     if o.get("bank"):
         kw["bank"] = o["bank"]
+    if o.get("country"):
+        kw["country"] = o["country"]
+    if o.get("currency"):
+        kw["currency"] = o["currency"]
     if o.get("income") not in (None, ""):
         kw["income"] = float(o["income"])
     if o.get("expense") not in (None, ""):
@@ -120,6 +124,8 @@ if (typeof document !== "undefined") {
     return {
       profile: fd.get("profile"),
       bank: fd.get("bank"),
+      country: fd.get("country"),
+      currency: fd.get("currency"),
       period: fd.get("period"),
       seed: fd.get("seed"),
       start: fd.get("start"),

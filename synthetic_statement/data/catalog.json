@@ -434,6 +434,48 @@
           "Tata Consultancy"
         ],
         "salary_token": "SALARY"
+      },
+      "banks": [
+        {
+          "name": "HDFC Bank",
+          "header": "HDFC Bank A/C XX{suffix}"
+        },
+        {
+          "name": "ICICI Bank",
+          "header": "ICICI Bank A/C XX{suffix}"
+        },
+        {
+          "name": "SBI",
+          "header": "State Bank of India A/C XX{suffix}"
+        },
+        {
+          "name": "Axis Bank",
+          "header": "Axis Bank A/C XX{suffix}"
+        },
+        {
+          "name": "Kotak Mahindra Bank",
+          "header": "Kotak Bank A/C XX{suffix}"
+        },
+        {
+          "name": "IndusInd Bank",
+          "header": "IndusInd Bank A/C XX{suffix}"
+        },
+        {
+          "name": "Federal Bank",
+          "header": "Federal Bank A/C XX{suffix}"
+        }
+      ],
+      "basket": {
+        "groceries": 0.24,
+        "food": 0.1,
+        "transport": 0.1,
+        "shopping": 0.12,
+        "bills": 0.1,
+        "health": 0.09,
+        "fuel": 0.07,
+        "entertainment": 0.05,
+        "finance": 0.08,
+        "other": 0.05
       }
     },
     "us": {
@@ -898,6 +940,48 @@
           "Deloitte"
         ],
         "salary_token": "PAYROLL"
+      },
+      "banks": [
+        {
+          "name": "Chase",
+          "header": "Chase ****{suffix}"
+        },
+        {
+          "name": "Bank of America",
+          "header": "Bank of America ****{suffix}"
+        },
+        {
+          "name": "Wells Fargo",
+          "header": "Wells Fargo ****{suffix}"
+        },
+        {
+          "name": "Citibank",
+          "header": "Citibank ****{suffix}"
+        },
+        {
+          "name": "Capital One",
+          "header": "Capital One ****{suffix}"
+        },
+        {
+          "name": "U.S. Bank",
+          "header": "U.S. Bank ****{suffix}"
+        },
+        {
+          "name": "PNC Bank",
+          "header": "PNC Bank ****{suffix}"
+        }
+      ],
+      "basket": {
+        "groceries": 0.16,
+        "food": 0.13,
+        "transport": 0.16,
+        "shopping": 0.12,
+        "bills": 0.12,
+        "health": 0.1,
+        "fuel": 0.06,
+        "entertainment": 0.06,
+        "finance": 0.05,
+        "other": 0.04
       }
     }
   }

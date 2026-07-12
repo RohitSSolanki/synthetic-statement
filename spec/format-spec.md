@@ -36,13 +36,14 @@ Every format below is a rendering of the same in-memory record (`Statement.recor
 | `time` | string | 24-hour `HH:MM:SS`. |
 | `Transaction Detail` | array[4] string | Fixed 4-line block — see below. |
 | `type` | `"debit"` \| `"credit"` | Direction (redundant with the detail verbs, but explicit). |
-| `amount` | number | Positive, major currency units (INR for region `in`). |
+| `amount` | number | Positive, in the run's `currency` (major units; see `meta.json`). |
 
 **`Transaction Detail` lines (positional):**
 0. `Paid to <name>` (debit) or `Received from <name>` (credit).
 1. `Transaction ID: TXN<YYYYMMDD><seq><rand>` — `TXN` + 8-digit date + zero-padded index + digits.
 2. `UTR No.: UTR<YYYYMMDD><seq><rand>`.
-3. `Paid by <account>` (debit) or `Credited to <account>` (credit); account reads `<Bank> A/C XX<4 digits>`.
+3. `Paid by <account>` (debit) or `Credited to <account>` (credit). The account format is
+   region-specific — India reads `<Bank> A/C XX<4 digits>`, US reads `<Bank> ****<4 digits>`.
 
 Records are sorted by `(date, time)` ascending. A fixed `--seed` yields **byte-identical** output.
 
@@ -75,15 +76,17 @@ Emitted by `Statement.write()` alongside the data (not part of the records strea
 | `seed` | The `--seed` used (may be null). |
 | `start_date`, `end_date` | ISO window bounds. |
 | `profile`, `bank` | Chosen spending profile / bank. |
-| `monthly_income`, `monthly_expense` | Run inputs. |
+| `country`, `currency` | Locale — catalog region (`india` / `usa`) + the amount currency. |
+| `monthly_income`, `monthly_expense` | Run inputs (in `currency`). |
 | `row_count`, `debit_count`, `credit_count` | Totals (`debit + credit == row`). |
 
 ---
 
 ## 5. PDF layouts
 
-Each rendered PDF is **text-based** (never an image), so `pdftotext -layout` reproduces the structure a
-parser reads. All three carry the watermark line `SYNTHETIC SAMPLE - NOT A REAL STATEMENT` and a trailing
+The PDF renderers reproduce **Indian UPI-app** layouts (PhonePe / Paytm / GPay) and are oriented to INR;
+for other currencies, use the currency-aware **JSON / CSV** output. Each rendered PDF is **text-based**
+(never an image), so `pdftotext -layout` reproduces the structure a parser reads. All three carry the watermark line `SYNTHETIC SAMPLE - NOT A REAL STATEMENT` and a trailing
 `This is a system generated statement.` Amounts drop the `₹`/`Rs.` symbol only if the embedded font can't
 render it (a bare number stays parser-valid).
 

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "base": "inr",
+  "note": "Currency scaling for the generator. `default_income`/`default_expense` are a plausible affluent-household monthly budget for the economy, anchored on `per_capita_annual` (approximate nominal figures, local currency). Adding a currency = supply its per-capita income and a proportional default budget; the merchant/basket set stays India or US (a downstream detail). scale = default_income / default_income[base]; amounts are rounded to `decimals`.",
+  "currencies": {
+    "inr": { "symbol": "₹",  "decimals": 2, "per_capita_annual": 225000,  "default_income": 120000, "default_expense": 90000 },
+    "usd": { "symbol": "$",       "decimals": 2, "per_capita_annual": 85000,   "default_income": 7000,   "default_expense": 5250 },
+    "eur": { "symbol": "€",  "decimals": 2, "per_capita_annual": 40000,   "default_income": 6000,   "default_expense": 4500 },
+    "gbp": { "symbol": "£",  "decimals": 2, "per_capita_annual": 48000,   "default_income": 6000,   "default_expense": 4500 },
+    "jpy": { "symbol": "¥",  "decimals": 0, "per_capita_annual": 4500000, "default_income": 700000, "default_expense": 525000 },
+    "aud": { "symbol": "A$",      "decimals": 2, "per_capita_annual": 68000,   "default_income": 9000,   "default_expense": 6750 },
+    "cad": { "symbol": "C$",      "decimals": 2, "per_capita_annual": 60000,   "default_income": 8500,   "default_expense": 6375 },
+    "sgd": { "symbol": "S$",      "decimals": 2, "per_capita_annual": 88000,   "default_income": 9000,   "default_expense": 6750 },
+    "chf": { "symbol": "CHF",     "decimals": 2, "per_capita_annual": 95000,   "default_income": 9500,   "default_expense": 7125 },
+    "aed": { "symbol": "AED",     "decimals": 2, "per_capita_annual": 165000,  "default_income": 30000,  "default_expense": 22500 },
+    "cny": { "symbol": "CN¥","decimals": 2, "per_capita_annual": 90000,   "default_income": 30000,  "default_expense": 22500 },
+    "zar": { "symbol": "R",       "decimals": 2, "per_capita_annual": 130000,  "default_income": 60000,  "default_expense": 45000 }
+  }
+}

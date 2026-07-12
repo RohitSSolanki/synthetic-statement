@@ -20,7 +20,9 @@ from synthetic_statement import generate  # noqa: E402
 from synthetic_statement import statement_generator as g  # noqa: E402
 
 _CATALOG = g._CATALOG
-_REGION_KEYS = {"label", "currency", "categories", "merchants", "persons", "employers"}
+_REGION_KEYS = {
+    "label", "currency", "categories", "merchants", "persons", "employers", "banks", "basket",
+}
 
 
 # --------------------------------------------------------------------------- #
@@ -79,17 +81,17 @@ def test_merchant_groups_reconstructed_from_catalog():
 
 
 # --------------------------------------------------------------------------- #
-# behaviour-preservation: fixed-seed output is byte-identical to pre-catalog
-# code (this pins the data-ization refactor — bump only on an intentional
-# generator/data change).
+# behaviour pin: fixed-seed India/INR output. Re-pinned at task 04c (basket
+# allocation + recurring commitments changed the default distribution). Bump
+# only on an intentional generator/data change.
 # --------------------------------------------------------------------------- #
 GOLDEN = {
     (42, "2026-01-01", "2026-03-31", "family-expense", "HDFC Bank"):
-        "f0a62b5f3f32f8ed156481421b1c8d6bbbd89f0cc269eefc1159152b0f0e2498",
+        "7ace4866ec3dfb618753e2471aadb1f8ac29ca3a499facf48210995062209bbe",
     (7, "2026-01-01", "2026-02-28", "student", "ICICI Bank"):
-        "d1a359e991a24ce662489883ee3cf1e39a53f714f28902081c6ac8a1069263cd",
+        "646753ed893cddee4f1b7a0fac5a4f9a18dc944045d11320e81cd3c32f4b34ed",
     (99, "2025-11-01", "2026-01-31", "salary-heavy", "Axis Bank"):
-        "70ba3755d1842ff341b5b2130b5fc13f1969cde9f8197d8e326f4e3180886fcb",
+        "1d59748d5a13bb31dbe6153debaac2939aeb94a9f2aff983fb065cc1d6781d0a",
 }
 
 

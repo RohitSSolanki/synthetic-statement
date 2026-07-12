@@ -11,6 +11,12 @@ proportions and per-capita income, not random noise.
 > It is **not** for producing documents that misrepresent a real person's finances. Don't use it to
 > deceive anyone.
 
+## Try it — no install
+
+**[▶ Generate a statement in your browser](https://synth.rohitsolanki.in/)** — pick a country, currency,
+persona and date range, and download **JSON / CSV / PDF**. It runs entirely in your browser (Pyodide);
+nothing is uploaded, no setup. Prefer code? Read on.
+
 ## Why
 
 Realistic test data is hard: hand-rolled fixtures look fake (a ₹50,000 water bill, groceries larger than
@@ -43,6 +49,11 @@ stmt = generate(seed=42, period="monthly", profile="family-expense")
 stmt.records        # list of structured txn dicts (in memory — no files written)
 stmt.to_json()      # -> str      stmt.to_csv() -> str
 stmt.write("out")   # -> statement.json / statement.csv / meta.json
+
+# Locale-aware: country picks the merchants/persons/banks; currency scales the
+# amounts (per-capita-anchored) and sets rounding. Amounts read plausibly for
+# the locale — no INR numbers shown under a foreign symbol.
+generate(seed=42, country="usa", currency="usd")
 ```
 
 `generate()` returns a `Statement` in memory (great for embedding or an in-browser build); `.write()`
@@ -57,20 +68,23 @@ The emitted formats — the surface a downstream parser sees — are documented 
 [`spec/statement.schema.json`](spec/statement.schema.json). A consumer can build a parser for any layout
 (JSON / CSV / the PhonePe / Paytm / GPay PDFs) from the spec alone.
 
-## What's inside (planned)
+## What's inside
 
 - **Generator core** — a library with a clean `options → statement` API (seeded/deterministic).
-- **Canonical catalog** — a curated, versioned list of common merchants (name, aliases, statement
-  descriptors, category) + a generic person pool for P2P.
-- **Realism engine** — per-category income proportions (from household-expenditure surveys) + a
-  per-capita-income-by-country table, so amounts are currency-aware.
-- **Renderers** — JSON + PDF output across common Indian bank / UPI statement layouts.
-- **Local UI** — a small web UI to pick options and download a statement, runnable from a clone.
+- **Versioned catalog** — region-keyed merchants / persons / employers / banks (India + US) as
+  editable data (`data/catalog.json`); adding a merchant is a data edit.
+- **Realism engine** — amounts allocated by a per-country **expenditure basket** (India MoSPI HCES /
+  US BLS), **per-capita-anchored currency scaling** (12 currencies), and **recurring** salary /
+  subscription / bill / EMI series so downstream recurring inference fires.
+- **Renderers** — JSON / CSV + PDF across common Indian bank / UPI statement layouts (PhonePe / Paytm /
+  GPay); the emitted formats are documented in [`spec/`](spec/format-spec.md).
+- **Hosted demo** — a client-side (Pyodide) GitHub Pages UI to pick options and download a statement,
+  no backend.
 
 ## Status
 
-Working + `pip install`-able: the generator, renderers, and verifier run, with deterministic seeded
-output. Catalog/realism tuning is ongoing; a clean `options → statement` library API is on the roadmap.
+Working + `pip install`-able: deterministic seeded output, locale-aware amounts, versioned catalog,
+documented formats, and a hosted client-side demo.
 
 ## License
 

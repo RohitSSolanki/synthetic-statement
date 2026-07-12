@@ -32,14 +32,31 @@ def _load_catalog() -> dict:
     return json.loads(text)
 
 
+def _load_currencies() -> dict:
+    """Load the currency scaling table (symbol / decimals / income anchors)."""
+    from importlib.resources import files
+
+    text = (files("synthetic_statement") / "data" / "currencies.json").read_text(encoding="utf-8")
+    return json.loads(text)
+
+
 _CATALOG = _load_catalog()
+_CURRENCIES = _load_currencies()
 _REGION = _CATALOG["regions"][_CATALOG["default_region"]]
 
-# Merchant draw pool — order preserved so seeded draws stay byte-stable.
+# `country` selects the beneficiary catalog (merchants / persons / employers /
+# banks); `currency` selects the money scale. They are independent — the US
+# catalog can be priced in any currency, which is how other economies reuse the
+# US set with a different per-capita income.
+COUNTRY_TO_REGION = {"india": "in", "usa": "us"}
+COUNTRY_DEFAULT_CURRENCY = {"india": "inr", "usa": "usd"}
+DEFAULT_COUNTRY = "india"
+
+# Default-region convenience views (India). Generation resolves these per-run
+# from the selected region; these module globals back CLI help + the catalog
+# tests. A merchant may belong to several categories.
 MERCHANTS = [_m["name"] for _m in _REGION["merchants"]]
 
-# name -> category classifier; group iteration order sets _group_merchant
-# precedence (a merchant may belong to several categories).
 MERCHANT_GROUPS = {
     _cat: tuple(_m["name"] for _m in _REGION["merchants"] if _cat in _m["categories"])
     for _cat in _REGION["categories"]
@@ -56,26 +73,10 @@ LAST_NAMES = _REGION["persons"]["last_names"]
 COMPANIES = _REGION["employers"]["companies"]
 SALARY_TOKEN = _REGION["employers"]["salary_token"]
 
-ACCOUNT_BANKS = [
-    "HDFC Bank",
-    "ICICI Bank",
-    "SBI",
-    "Axis Bank",
-    "Kotak Mahindra Bank",
-    "IndusInd Bank",
-    "Federal Bank",
-]
-
-BANK_HEADER_TEMPLATES = {
-    "HDFC Bank": "HDFC Bank A/C XX{suffix}",
-    "ICICI Bank": "ICICI Bank A/C XX{suffix}",
-    "SBI": "State Bank of India A/C XX{suffix}",
-    "Axis Bank": "Axis Bank A/C XX{suffix}",
-    "Kotak Mahindra Bank": "Kotak Bank A/C XX{suffix}",
-    "IndusInd Bank": "IndusInd Bank A/C XX{suffix}",
-    "Federal Bank": "Federal Bank A/C XX{suffix}",
-}
-
+# Default-region (India) banks, single-sourced from the catalog; kept as module
+# names for CLI help + validation. Other regions carry their own banks.
+ACCOUNT_BANKS = [_b["name"] for _b in _REGION["banks"]]
+BANK_HEADER_TEMPLATES = {_b["name"]: _b["header"] for _b in _REGION["banks"]}
 BANK_INPUTS = ACCOUNT_BANKS + ["random"]
 
 DEFAULT_MONTHLY_INCOME = 120000.0
@@ -86,6 +87,81 @@ DEFAULT_BANK = "random"
 DEFAULT_OUTPUT_ROOT = Path(__file__).resolve().parent / "runs"
 
 GENERATOR_VERSION = "1.0"
+
+
+@dataclass(frozen=True)
+class _ResolvedRegion:
+    """A region's beneficiary data, resolved once per run from the catalog."""
+
+    merchants: list[str]
+    merchant_groups: dict[str, tuple[str, ...]]
+    first_names: list[str]
+    last_names: list[str]
+    companies: list[str]
+    salary_token: str
+    bank_names: list[str]
+    bank_headers: dict[str, str]
+    basket: dict[str, float]
+
+
+def _resolve_region(country: str) -> "_ResolvedRegion":
+    region = _CATALOG["regions"][COUNTRY_TO_REGION[country]]
+    return _ResolvedRegion(
+        merchants=[m["name"] for m in region["merchants"]],
+        merchant_groups={
+            cat: tuple(m["name"] for m in region["merchants"] if cat in m["categories"])
+            for cat in region["categories"]
+        },
+        first_names=region["persons"]["first_names"],
+        last_names=region["persons"]["last_names"],
+        companies=region["employers"]["companies"],
+        salary_token=region["employers"]["salary_token"],
+        bank_names=[b["name"] for b in region["banks"]],
+        bank_headers={b["name"]: b["header"] for b in region["banks"]},
+        basket=region["basket"],
+    )
+
+
+@dataclass(frozen=True)
+class _Currency:
+    """Money-scale for a currency: symbol, rounding and the income anchors."""
+
+    code: str
+    symbol: str
+    decimals: int
+    scale: float
+    default_income: float
+    default_expense: float
+
+
+def _resolve_currency(currency: str) -> "_Currency":
+    table = _CURRENCIES["currencies"]
+    base_income = table[_CURRENCIES["base"]]["default_income"]
+    row = table[currency]
+    return _Currency(
+        code=currency,
+        symbol=row["symbol"],
+        decimals=int(row["decimals"]),
+        scale=row["default_income"] / base_income,
+        default_income=float(row["default_income"]),
+        default_expense=float(row["default_expense"]),
+    )
+
+
+def _validate_country(country: str) -> str:
+    key = country.lower()
+    if key not in COUNTRY_TO_REGION:
+        raise SystemExit(f"Unknown country '{country}'. Choose from: {', '.join(COUNTRY_TO_REGION)}")
+    return key
+
+
+def _validate_currency(currency: str) -> str:
+    key = currency.lower()
+    if key not in _CURRENCIES["currencies"]:
+        raise SystemExit(
+            f"Unknown currency '{currency}'. Choose from: {', '.join(_CURRENCIES['currencies'])}"
+        )
+    return key
 
 
 @dataclass(frozen=True)
@@ -196,6 +272,8 @@ class RunConfig:
     seed: Optional[int]
     profile: str
     bank: str
+    country: str = DEFAULT_COUNTRY
+    currency: str = "inr"
 
 
 def _parse_amount(raw: str, label: str) -> float:
@@ -401,43 +479,28 @@ def _pick_time(rng: random.Random) -> str:
     return f"{hour:02d}:{minute:02d}:{second:02d}"
 
 
-def _group_merchant(name: str) -> str:
-    lowered = name.lower()
-    for group, merchants in MERCHANT_GROUPS.items():
-        if any(marker.lower() in lowered for marker in merchants):
-            return group
-    return "other"
-
-
-def _choose_profile_merchant(
-    rng: random.Random, merchant_pool: list[str], profile: ProfileSpec
-) -> str:
-    grouped: dict[str, list[str]] = {}
-    for merchant in merchant_pool:
-        grouped.setdefault(_group_merchant(merchant), []).append(merchant)
-    groups = [name for name, items in grouped.items() if items]
-    if not groups:
-        return rng.choice(merchant_pool)
-    weights = [profile.merchant_weights.get(group, 0.5) for group in groups]
-    chosen_group = rng.choices(groups, weights=weights, k=1)[0]
-    return rng.choice(grouped[chosen_group])
-
-
-def _build_person_pool(rng: random.Random, size: int = 40) -> list[str]:
+def _build_person_pool(
+    rng: random.Random, first_names: list[str], last_names: list[str], size: int = 40
+) -> list[str]:
     names: list[str] = []
     seen: set[str] = set()
     while len(names) < size:
-        candidate = f"{rng.choice(FIRST_NAMES)} {rng.choice(LAST_NAMES)}"
+        candidate = f"{rng.choice(first_names)} {rng.choice(last_names)}"
         if candidate not in seen:
             seen.add(candidate)
             names.append(candidate)
     return names
 
 
-def _account_header(rng: random.Random, bank: str) -> str:
-    bank_name = rng.choice(ACCOUNT_BANKS) if bank == DEFAULT_BANK else bank
+def _account_header(
+    rng: random.Random,
+    bank: str,
+    bank_names: list[str],
+    bank_headers: dict[str, str],
+) -> str:
+    bank_name = rng.choice(bank_names) if bank == DEFAULT_BANK else bank
     suffix = "".join(str(rng.randint(0, 9)) for _ in range(4))
-    template = BANK_HEADER_TEMPLATES.get(bank_name, "{bank} A/C XX{suffix}")
+    template = bank_headers.get(bank_name, "{bank} A/C XX{suffix}")
     return template.format(bank=bank_name, suffix=suffix)
 
 
@@ -476,6 +539,7 @@ def _generate_amounts(
     count: int,
     *,
     profile: ProfileSpec,
+    decimals: int = 2,
 ) -> list[float]:
     if count <= 0:
         return []
@@ -500,16 +564,104 @@ def _generate_amounts(
             raw[idx] *= rng.uniform(profile.outlier_boost * 0.6, profile.outlier_boost * 1.4)
 
     scale = target / sum(raw)
-    amounts = [round(value * scale, 2) for value in raw]
-    # Spread the rounding residual one paisa at a time across rows rather than
-    # dumping the whole remainder onto the last amount (which can visibly skew
-    # one row). The total residual is only a few paise, so this stays subtle.
-    residual_paise = round((target - sum(amounts)) * 100)
-    step = 0.01 if residual_paise > 0 else -0.01
-    for offset in range(abs(residual_paise)):
+    amounts = [round(value * scale, decimals) for value in raw]
+    # Spread the rounding residual one minor-unit at a time across rows rather
+    # than dumping the whole remainder onto the last amount (which can visibly
+    # skew one row). The total residual is only a few minor units, so it stays
+    # subtle. ``unit`` is the currency's smallest unit (paise, cents, whole yen).
+    unit = 10 ** (-decimals)
+    residual_units = round((target - sum(amounts)) / unit)
+    step = unit if residual_units > 0 else -unit
+    for offset in range(abs(residual_units)):
         idx = offset % len(amounts)
-        amounts[idx] = round(amounts[idx] + step, 2)
+        amounts[idx] = round(amounts[idx] + step, decimals)
     return amounts
+
+
+# Recurring monthly commitments, carved from the expense budget so a downstream
+# recurring-inference engine sees stable series. (category, fraction of monthly
+# expense, day-of-month). Each fraction stays under its category's basket share.
+_RECURRING_SPECS = [
+    ("bills", 0.04, 5),           # a monthly utility / telecom bill
+    ("entertainment", 0.012, 2),  # subscription
+    ("entertainment", 0.010, 3),  # subscription
+    ("finance", 0.05, 7),         # an EMI / loan instalment
+]
+
+
+def _recurring_plan(
+    rng: random.Random,
+    *,
+    region: "_ResolvedRegion",
+    currency: "_Currency",
+    monthly_expense: float,
+) -> list[dict]:
+    """Fixed monthly commitments (merchant + amount + day), stable across the run
+    so recurring inference fires. Each is carved from its category's budget."""
+    plan: list[dict] = []
+    for category, fraction, day in _RECURRING_SPECS:
+        pool = region.merchant_groups.get(category)
+        amount = round(monthly_expense * fraction, currency.decimals)
+        if not pool or amount <= 0:
+            continue
+        plan.append(
+            {"category": category, "merchant": rng.choice(pool), "amount": amount, "day": day}
+        )
+    return plan
+
+
+def _recurring_date(day: int, segment_start: date, segment_end: date):
+    """The recurring day resolved within this (single-month) segment, or None if
+    it falls outside the window."""
+    import calendar
+
+    last = calendar.monthrange(segment_start.year, segment_start.month)[1]
+    candidate = date(segment_start.year, segment_start.month, min(day, last))
+    return candidate if segment_start <= candidate <= segment_end else None
+
+
+def _plan_merchant_debits(
+    rng: random.Random,
+    *,
+    merchant_expense: float,
+    merchant_count: int,
+    region: "_ResolvedRegion",
+    currency: "_Currency",
+    profile: ProfileSpec,
+    reserved: dict[str, float] | None = None,
+    exclude: set[str] | None = None,
+) -> list[tuple[str, float]]:
+    """Split merchant debits across categories: **amount** share per category
+    tracks the region's expenditure ``basket`` (so category totals are realistic),
+    **count** tracks the profile's frequency weights (many small food txns, a few
+    large finance/EMI ones). Returns ``(merchant, amount)`` pairs.
+    """
+    categories = [c for c in region.basket if region.merchant_groups.get(c)]
+    if not categories or merchant_count <= 0 or merchant_expense <= 0:
+        return []
+    freq = profile.merchant_weights
+    freq_sum = sum(freq.get(c, 0.5) for c in categories) or 1.0
+    counts = {c: int(round(merchant_count * freq.get(c, 0.5) / freq_sum)) for c in categories}
+    present = [c for c in categories if counts[c] > 0]
+    if not present:  # tiny segment — collapse to the single most frequent category
+        top = max(categories, key=lambda c: freq.get(c, 0.5))
+        present, counts[top] = [top], merchant_count
+    reserved = reserved or {}
+    exclude = exclude or set()
+    basket_sum = sum(region.basket[c] for c in present) or 1.0
+    lines: list[tuple[str, float]] = []
+    for category in present:
+        budget = merchant_expense * region.basket[category] / basket_sum - reserved.get(category, 0.0)
+        if budget <= 0:  # recurring commitments already cover this category's share
+            continue
+        amounts = _generate_amounts(
+            rng, budget, counts[category], profile=profile, decimals=currency.decimals
+        )
+        # Keep recurring merchants out of random draws so their series stay clean.
+        pool = [m for m in region.merchant_groups[category] if m not in exclude]
+        pool = pool or list(region.merchant_groups[category])
+        lines.extend((rng.choice(pool), amount) for amount in amounts)
+    return lines
 
 
 def _generate_month_segment(
@@ -521,8 +673,10 @@ def _generate_month_segment(
     person_pool: list[str],
     monthly_income: float,
     monthly_expense: float,
-    merchant_pool: list[str],
+    region: "_ResolvedRegion",
+    currency: "_Currency",
     profile: ProfileSpec,
+    recurring: list[dict],
 ) -> list[dict[str, object]]:
     days = (segment_end - segment_start).days + 1
     proration = days / 30.4375
@@ -536,17 +690,17 @@ def _generate_month_segment(
     credit_count = 1 + int(rng.random() < profile.credit_extra_chance)
     credit_amounts: list[float]
     if credit_count == 1:
-        credit_amounts = [round(income_target, 2)]
+        credit_amounts = [round(income_target, currency.decimals)]
     else:
-        first = round(income_target * rng.uniform(*profile.credit_extra_split_range), 2)
-        second = round(max(0.01, income_target - first), 2)
+        first = round(income_target * rng.uniform(*profile.credit_extra_split_range), currency.decimals)
+        second = round(max(0.01, income_target - first), currency.decimals)
         credit_amounts = [first, second]
 
     # Salary inflow: a company name + a SALARY token (NOT a person), so income
     # is separable from P2P credits / merchant refunds at categorization time.
-    salary_source = f"{rng.choice(COMPANIES)} {SALARY_TOKEN}"
+    salary_source = f"{rng.choice(region.companies)} {region.salary_token}"
     peer_source = rng.choice(person_pool)
-    refund_source = rng.choice(merchant_pool)
+    refund_source = rng.choice(region.merchants)
     another_peer = rng.choice(
         [name for name in person_pool if name != peer_source] or person_pool
     )
@@ -586,19 +740,57 @@ def _generate_month_segment(
             }
         )
 
+    # Consumption debits: amount split across categories by the region's basket,
+    # count by the profile's frequency weights, plus a P2P person-transfer slice.
     debit_target = max(0.01, expense_target * rng.uniform(0.96, 1.04))
-    debit_count = max(8, int(round(debit_target / rng.uniform(*profile.debit_count_divisor_range))))
-    debit_amounts = _generate_amounts(rng, debit_target, debit_count, profile=profile)
+    # The divisor (an implicit average txn size) scales with the currency so the
+    # transaction *count* stays comparable across currencies.
+    divisor = rng.uniform(*profile.debit_count_divisor_range) * currency.scale
+    total_count = max(8, int(round(debit_target / divisor)))
+    person_count = int(round(total_count * profile.debit_person_prob))
+    merchant_count = max(1, total_count - person_count)
+    merchant_expense = debit_target * (1 - profile.debit_person_prob)
+    person_expense = max(0.0, debit_target - merchant_expense)
 
-    for index, amount in enumerate(debit_amounts, start=1):
-        txn_day = _pick_date(rng, segment_start, segment_end)
-        if txn_day.weekday() < 5 and rng.random() < 0.75:
-            txn_day = _pick_weekday(rng, segment_start, segment_end)
-        counterparty = (
-            rng.choice(person_pool)
-            if rng.random() < profile.debit_person_prob
-            else _choose_profile_merchant(rng, merchant_pool, profile)
+    # Recurring commitments (fixed merchant / amount / day), carved from budgets.
+    reserved: dict[str, float] = {}
+    recurring_lines: list[tuple[date, str, float]] = []
+    for item in recurring:
+        day = _recurring_date(item["day"], segment_start, segment_end)
+        if day is None:
+            continue
+        reserved[item["category"]] = reserved.get(item["category"], 0.0) + item["amount"]
+        recurring_lines.append((day, item["merchant"], item["amount"]))
+    recurring_merchants = {item["merchant"] for item in recurring}
+
+    debit_lines = _plan_merchant_debits(
+        rng,
+        merchant_expense=merchant_expense,
+        merchant_count=merchant_count,
+        region=region,
+        currency=currency,
+        profile=profile,
+        reserved=reserved,
+        exclude=recurring_merchants,
+    )
+    if person_count > 0 and person_expense > 0:
+        person_amounts = _generate_amounts(
+            rng, person_expense, person_count, profile=profile, decimals=currency.decimals
         )
+        debit_lines.extend((rng.choice(person_pool), amount) for amount in person_amounts)
+
+    # Recurring rows keep their fixed day; the rest get a (weekday-biased) date.
+    dated_lines: list[tuple["date | None", str, float]] = [
+        (day, merchant, amount) for (day, merchant, amount) in recurring_lines
+    ]
+    dated_lines += [(None, counterparty, amount) for (counterparty, amount) in debit_lines]
+    for index, (fixed_day, counterparty, amount) in enumerate(dated_lines, start=1):
+        if fixed_day is not None:
+            txn_day = fixed_day
+        else:
+            txn_day = _pick_date(rng, segment_start, segment_end)
+            if txn_day.weekday() < 5 and rng.random() < 0.75:
+                txn_day = _pick_weekday(rng, segment_start, segment_end)
         txn_id = _txn_id(rng, txn_day, 100 + index)
         utr_no = _utr_no(rng, txn_day, 100 + index)
         txns.append(
@@ -623,9 +815,14 @@ def _generate_month_segment(
 
 def _generate_records(config: RunConfig) -> list[dict[str, object]]:
     rng = random.Random(config.seed)
-    person_pool = _build_person_pool(rng, size=40)
+    region = _resolve_region(config.country)
+    currency = _resolve_currency(config.currency)
+    person_pool = _build_person_pool(rng, region.first_names, region.last_names, size=40)
     profile = PROFILE_SPECS[config.profile]
-    account_header = _account_header(rng, config.bank)
+    account_header = _account_header(rng, config.bank, region.bank_names, region.bank_headers)
+    recurring = _recurring_plan(
+        rng, region=region, currency=currency, monthly_expense=config.monthly_expense
+    )
 
     records: list[dict[str, object]] = []
     for segment_start, segment_end in _month_windows(config.start_date, config.end_date):
@@ -638,8 +835,10 @@ def _generate_records(config: RunConfig) -> list[dict[str, object]]:
                 person_pool=person_pool,
                 monthly_income=config.monthly_income,
                 monthly_expense=config.monthly_expense,
-                merchant_pool=MERCHANTS,
+                region=region,
+                currency=currency,
                 profile=profile,
+                recurring=recurring,
             )
         )
 
@@ -659,6 +858,8 @@ def _build_meta(config: RunConfig, records: list[dict[str, object]]) -> dict:
         "end_date": config.end_date.isoformat(),
         "profile": config.profile,
         "bank": config.bank,
+        "country": config.country,
+        "currency": config.currency,
         "monthly_income": config.monthly_income,
         "monthly_expense": config.monthly_expense,
         "row_count": len(records),
@@ -713,6 +914,8 @@ def _config_from_options(
     bank: str | None = None,
     income: float | None = None,
     expense: float | None = None,
+    country: str | None = None,
+    currency: str | None = None,
     today: date | None = None,
 ) -> RunConfig:
     """Resolve library options into a :class:`RunConfig` — non-interactive, pure."""
@@ -733,14 +936,19 @@ def _config_from_options(
         else:
             end_date = today
             start_date = _rolling_start(end_date, resolved_period)
+    country_key = _validate_country(country) if country else DEFAULT_COUNTRY
+    currency_key = _validate_currency(currency) if currency else COUNTRY_DEFAULT_CURRENCY[country_key]
+    cur = _resolve_currency(currency_key)
     return RunConfig(
         start_date=start_date,
         end_date=end_date,
-        monthly_income=DEFAULT_MONTHLY_INCOME if income is None else income,
-        monthly_expense=DEFAULT_MONTHLY_EXPENSE if expense is None else expense,
+        monthly_income=cur.default_income if income is None else income,
+        monthly_expense=cur.default_expense if expense is None else expense,
         seed=seed,
         profile=_choose_profile(False, profile),
         bank=_choose_bank(False, bank),
+        country=country_key,
+        currency=currency_key,
     )
 
 
@@ -755,22 +963,28 @@ def generate(
     bank: str | None = None,
     income: float | None = None,
     expense: float | None = None,
+    country: str | None = None,
+    currency: str | None = None,
     today: date | None = None,
 ) -> Statement:
     """Generate a synthetic statement in memory — the library entry point.
 
     Options mirror the CLI flags (``seed``, ``start``/``end`` or ``range`` or a
-    rolling ``period``, ``profile``, ``bank``, ``income``, ``expense``); all have
-    sensible defaults. A fixed ``seed`` yields **byte-identical** output for the
-    same options. ``today`` overrides the reference date for rolling periods
-    (deterministic tests/screenshots). Returns a :class:`Statement`.
+    rolling ``period``, ``profile``, ``bank``, ``income``, ``expense``,
+    ``country``, ``currency``); all have sensible defaults. ``country`` selects
+    the merchant/person/bank set (``india`` / ``usa``); ``currency`` sets the
+    money scale and defaults from the country. A fixed ``seed`` yields
+    **byte-identical** output for the same options. ``today`` overrides the
+    reference date for rolling periods (deterministic tests/screenshots).
+    Returns a :class:`Statement`.
 
     The CLI (:func:`main`) and any programmatic caller (a consumer app, the
     in-browser Pyodide UI) share this one path, so they can never diverge.
     """
     config = _config_from_options(
         seed=seed, start=start, end=end, range=range, period=period,
-        profile=profile, bank=bank, income=income, expense=expense, today=today,
+        profile=profile, bank=bank, income=income, expense=expense,
+        country=country, currency=currency, today=today,
     )
     records = _generate_records(config)
     return Statement(records=records, meta=_build_meta(config, records))
@@ -822,7 +1036,8 @@ def _print_summary(config: RunConfig, records: list[dict[str, object]], output_d
     )
     print(
         f"  Range: {config.start_date.isoformat()} -> {config.end_date.isoformat()}, "
-        f"profile={config.profile}, bank={config.bank}"
+        f"profile={config.profile}, bank={config.bank}, "
+        f"country={config.country}, currency={config.currency}"
     )
     print(f"  Seed : {config.seed if config.seed is not None else 'random (not reproducible)'}")
 
@@ -833,6 +1048,9 @@ def _build_config(args: argparse.Namespace) -> RunConfig:
     period = "custom" if explicit_range else _choose_period(not args.yes, args.period)
     profile = _choose_profile(not args.yes, args.profile)
     bank = _choose_bank(not args.yes, args.bank)
+    country = _validate_country(args.country) if args.country else DEFAULT_COUNTRY
+    currency = _validate_currency(args.currency) if args.currency else COUNTRY_DEFAULT_CURRENCY[country]
+    cur = _resolve_currency(currency)
 
     if args.range:
         start_date, end_date = _parse_range(args.range)
@@ -857,16 +1075,16 @@ def _build_config(args: argparse.Namespace) -> RunConfig:
     if args.income is not None:
         monthly_income = args.income
     elif args.yes:
-        monthly_income = DEFAULT_MONTHLY_INCOME
+        monthly_income = cur.default_income
     else:
-        monthly_income = _prompt_float("Average monthly income", DEFAULT_MONTHLY_INCOME)
+        monthly_income = _prompt_float("Average monthly income", cur.default_income)
 
     if args.expense is not None:
         monthly_expense = args.expense
     elif args.yes:
-        monthly_expense = DEFAULT_MONTHLY_EXPENSE
+        monthly_expense = cur.default_expense
     else:
-        monthly_expense = _prompt_float("Average monthly expense", DEFAULT_MONTHLY_EXPENSE)
+        monthly_expense = _prompt_float("Average monthly expense", cur.default_expense)
 
     if args.seed is not None:
         seed = args.seed
@@ -883,6 +1101,8 @@ def _build_config(args: argparse.Namespace) -> RunConfig:
         seed=seed,
         profile=profile,
         bank=bank,
+        country=country,
+        currency=currency,
     )
 
 
@@ -913,6 +1133,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--bank",
         choices=BANK_INPUTS,
         help="Account bank to stamp into the statement header",
+    )
+    parser.add_argument(
+        "--country",
+        choices=sorted(COUNTRY_TO_REGION),
+        help="Country for merchants / persons / banks (default: india)",
+    )
+    parser.add_argument(
+        "--currency",
+        choices=sorted(_CURRENCIES["currencies"]),
+        help="Currency for amount scaling (default: the country's currency)",
     )
     parser.add_argument(
         "--range",
