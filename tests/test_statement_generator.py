@@ -33,7 +33,6 @@ def _config(**overrides) -> generator.RunConfig:
         seed=42,
         profile="salary-heavy",
         bank="HDFC Bank",
-        output_dir=Path("/unused"),
     )
     base.update(overrides)
     return generator.RunConfig(**base)
@@ -253,3 +252,50 @@ def test_main_seed_reproduces_identical_output(tmp_path):
     out_a = _run_main(tmp_path / "a")
     out_b = _run_main(tmp_path / "b")
     assert (out_a / "statement.json").read_text() == (out_b / "statement.json").read_text()
+
+
+# --------------------------------------------------------------------------- #
+# generate() — the library API (task 02)
+# --------------------------------------------------------------------------- #
+def test_generate_returns_statement_with_records_and_meta():
+    stmt = generator.generate(seed=42, start="2026-01-01", end="2026-01-31")
+    assert isinstance(stmt, generator.Statement)
+    assert stmt.records and isinstance(stmt.records[0], dict)
+    assert stmt.meta["seed"] == 42
+    assert stmt.meta["row_count"] == len(stmt.records)
+
+
+def test_generate_is_deterministic():
+    a = generator.generate(seed=7, start="2026-01-01", end="2026-01-31")
+    b = generator.generate(seed=7, start="2026-01-01", end="2026-01-31")
+    assert a.records == b.records
+    assert a.to_json() == b.to_json()
+    assert a.to_csv() == b.to_csv()
+
+
+def test_generate_matches_internal_config_path():
+    # The library API and the internal RunConfig path converge on the same records.
+    stmt = generator.generate(
+        seed=42, start="2026-01-01", end="2026-01-31",
+        bank="HDFC Bank", profile="salary-heavy", income=120000.0, expense=90000.0,
+    )
+    cfg = _config(seed=42, start_date=date(2026, 1, 1), end_date=date(2026, 1, 31))
+    assert stmt.records == generator._generate_records(cfg)
+
+
+def test_generate_today_override_shifts_rolling_period():
+    stmt = generator.generate(seed=1, period="weekly", today=date(2026, 3, 31))
+    assert stmt.meta["end_date"] == "2026-03-31"
+    assert stmt.meta["start_date"] == "2026-03-25"  # weekly = 6 days back
+
+
+def test_statement_write_produces_the_three_files(tmp_path):
+    out = generator.generate(seed=42, start="2026-01-01", end="2026-01-31").write(tmp_path / "out")
+    assert (out / "statement.json").exists()
+    assert (out / "statement.csv").exists()
+    assert (out / "meta.json").exists()
+
+
+def test_generate_requires_start_and_end_together():
+    with pytest.raises(ValueError):
+        generator.generate(start="2026-01-01")  # end missing

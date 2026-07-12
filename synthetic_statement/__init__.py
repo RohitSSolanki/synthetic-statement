@@ -1,17 +1,28 @@
 """synthetic-statement — generate realistic synthetic bank & UPI statements.
 
-Public surface (thin, over the existing code):
+Library API (the clean ``options -> statement`` surface):
 
-    from synthetic_statement import statement_generator
-    statement_generator.main(["--yes", "--seed", "42", "--output-dir", "out"])
+    from synthetic_statement import generate
+    stmt = generate(seed=42, period="monthly", profile="family-expense")
+    data = stmt.records          # list of structured txn dicts (in memory)
+    stmt.to_json()               # -> str      stmt.to_csv() -> str
+    stmt.write("out")            # -> statement.json / statement.csv / meta.json
 
 or via the console script / module runner:
 
     synthetic-statement --yes --seed 42 --output-dir out
     python -m synthetic_statement --yes --seed 42 --output-dir out
 
-The clean ``options -> statement`` library API is roadmap task 02; this package
-just makes the current CLI importable + installable.
+The CLI and ``generate()`` share one path, so their output never diverges. A
+fixed ``seed`` gives byte-identical results.
 """
 
-__all__ = ["statement_generator", "render_statement", "verify_statement"]
+from .statement_generator import Statement, generate
+
+__all__ = [
+    "generate",
+    "Statement",
+    "statement_generator",
+    "render_statement",
+    "verify_statement",
+]

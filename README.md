@@ -37,13 +37,18 @@ synthetic-statement --yes --seed 42 --profile family-expense --output-dir out
 ```
 
 ```python
-from synthetic_statement import statement_generator
-statement_generator.main(["--yes", "--seed", "42", "--output-dir", "out"])
+from synthetic_statement import generate
+
+stmt = generate(seed=42, period="monthly", profile="family-expense")
+stmt.records        # list of structured txn dicts (in memory — no files written)
+stmt.to_json()      # -> str      stmt.to_csv() -> str
+stmt.write("out")   # -> statement.json / statement.csv / meta.json
 ```
 
-Writes `statement.json` (structured records), `statement.csv`, and `meta.json` (version/seed/options
-provenance) into the output dir. See `synthetic-statement --help` for currency, date range, income/
-expense, bank and profile options.
+`generate()` returns a `Statement` in memory (great for embedding or an in-browser build); `.write()`
+persists the three files, with `meta.json` recording version/seed/options provenance. A fixed `seed` gives
+**byte-identical** output. The CLI is a thin caller of the same path — see `synthetic-statement --help` for
+date range, income/expense, bank and profile options.
 
 ## What's inside (planned)
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import io
 import json
 import random
 import sys
@@ -316,7 +317,6 @@ class RunConfig:
     seed: Optional[int]
     profile: str
     bank: str
-    output_dir: Path
 
 
 def _parse_amount(raw: str, label: str) -> float:
@@ -770,33 +770,10 @@ def _generate_records(config: RunConfig) -> list[dict[str, object]]:
     return records
 
 
-def _write_csv(path: Path, records: Iterable[dict[str, object]]) -> None:
-    fieldnames = ["date", "time", "Transaction Detail", "type", "amount"]
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in records:
-            writer.writerow(
-                {
-                    "date": row["date"],
-                    "time": row["time"],
-                    "Transaction Detail": json.dumps(
-                        row["Transaction Detail"], ensure_ascii=False
-                    ),
-                    "type": row["type"],
-                    "amount": f"{float(row['amount']):.2f}",
-                }
-            )
-
-
-def _write_json(path: Path, records: list[dict[str, object]]) -> None:
-    path.write_text(json.dumps(records, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-
-def _write_meta(path: Path, config: RunConfig, records: list[dict[str, object]]) -> None:
-    """Persist the run parameters so a statement can be reproduced/verified later."""
+def _build_meta(config: RunConfig, records: list[dict[str, object]]) -> dict:
+    """The reproducibility/provenance header for a generated statement."""
     debit_count = sum(1 for row in records if row["type"] == "debit")
-    meta = {
+    return {
         "generator_version": GENERATOR_VERSION,
         "seed": config.seed,
         "start_date": config.start_date.isoformat(),
@@ -809,7 +786,146 @@ def _write_meta(path: Path, config: RunConfig, records: list[dict[str, object]])
         "debit_count": debit_count,
         "credit_count": len(records) - debit_count,
     }
-    path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+
+
+@dataclass(frozen=True)
+class Statement:
+    """A generated statement held in memory: structured ``records`` + ``meta``.
+
+    The library return value (see :func:`generate`). Serialize with
+    :meth:`to_json` / :meth:`to_csv`, or persist all three files with
+    :meth:`write`. Purely in-memory — no file I/O until you ask for it — so it
+    runs anywhere, including in-browser (Pyodide).
+    """
+
+    records: list[dict]
+    meta: dict
+
+    def to_json(self) -> str:
+        return json.dumps(self.records, indent=2, ensure_ascii=False) + "\n"
+
+    def meta_json(self) -> str:
+        return json.dumps(self.meta, indent=2) + "\n"
+
+    def to_csv(self) -> str:
+        buf = io.StringIO()
+        _write_csv_rows(buf, self.records)
+        return buf.getvalue()
+
+    def write(self, output_dir) -> Path:
+        """Write ``statement.json`` / ``statement.csv`` / ``meta.json`` into ``output_dir``."""
+        output_dir = Path(output_dir).expanduser().resolve()
+        output_dir.mkdir(parents=True, exist_ok=True)
+        with (output_dir / "statement.csv").open("w", newline="", encoding="utf-8") as handle:
+            _write_csv_rows(handle, self.records)
+        (output_dir / "statement.json").write_text(self.to_json(), encoding="utf-8")
+        (output_dir / "meta.json").write_text(self.meta_json(), encoding="utf-8")
+        return output_dir
+
+
+def _config_from_options(
+    *,
+    seed: Optional[int] = None,
+    start: str | None = None,
+    end: str | None = None,
+    range: str | None = None,
+    period: str | None = None,
+    profile: str | None = None,
+    bank: str | None = None,
+    income: float | None = None,
+    expense: float | None = None,
+    today: date | None = None,
+) -> RunConfig:
+    """Resolve library options into a :class:`RunConfig` — non-interactive, pure."""
+    today = today or datetime.now().date()
+    if range:
+        start_date, end_date = _parse_range(range)
+    elif start or end:
+        if not (start and end):
+            raise ValueError("both `start` and `end` are required together")
+        start_date = _parse_date(start, "start")
+        end_date = _parse_date(end, "end")
+        if start_date > end_date:
+            raise ValueError("`start` must be <= `end`")
+    else:
+        resolved_period = _choose_period(False, period)
+        if resolved_period == "custom":
+            start_date, end_date = today - timedelta(days=29), today
+        else:
+            end_date = today
+            start_date = _rolling_start(end_date, resolved_period)
+    return RunConfig(
+        start_date=start_date,
+        end_date=end_date,
+        monthly_income=DEFAULT_MONTHLY_INCOME if income is None else income,
+        monthly_expense=DEFAULT_MONTHLY_EXPENSE if expense is None else expense,
+        seed=seed,
+        profile=_choose_profile(False, profile),
+        bank=_choose_bank(False, bank),
+    )
+
+
+def generate(
+    *,
+    seed: Optional[int] = None,
+    start: str | None = None,
+    end: str | None = None,
+    range: str | None = None,
+    period: str | None = None,
+    profile: str | None = None,
+    bank: str | None = None,
+    income: float | None = None,
+    expense: float | None = None,
+    today: date | None = None,
+) -> Statement:
+    """Generate a synthetic statement in memory — the library entry point.
+
+    Options mirror the CLI flags (``seed``, ``start``/``end`` or ``range`` or a
+    rolling ``period``, ``profile``, ``bank``, ``income``, ``expense``); all have
+    sensible defaults. A fixed ``seed`` yields **byte-identical** output for the
+    same options. ``today`` overrides the reference date for rolling periods
+    (deterministic tests/screenshots). Returns a :class:`Statement`.
+
+    The CLI (:func:`main`) and any programmatic caller (a consumer app, the
+    in-browser Pyodide UI) share this one path, so they can never diverge.
+    """
+    config = _config_from_options(
+        seed=seed, start=start, end=end, range=range, period=period,
+        profile=profile, bank=bank, income=income, expense=expense, today=today,
+    )
+    records = _generate_records(config)
+    return Statement(records=records, meta=_build_meta(config, records))
+
+
+def _write_csv_rows(handle, records: Iterable[dict[str, object]]) -> None:
+    writer = csv.DictWriter(
+        handle, fieldnames=["date", "time", "Transaction Detail", "type", "amount"]
+    )
+    writer.writeheader()
+    for row in records:
+        writer.writerow(
+            {
+                "date": row["date"],
+                "time": row["time"],
+                "Transaction Detail": json.dumps(row["Transaction Detail"], ensure_ascii=False),
+                "type": row["type"],
+                "amount": f"{float(row['amount']):.2f}",
+            }
+        )
+
+
+def _write_csv(path: Path, records: Iterable[dict[str, object]]) -> None:
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        _write_csv_rows(handle, records)
+
+
+def _write_json(path: Path, records: list[dict[str, object]]) -> None:
+    path.write_text(json.dumps(records, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _write_meta(path: Path, config: RunConfig, records: list[dict[str, object]]) -> None:
+    """Persist the run parameters so a statement can be reproduced/verified later."""
+    path.write_text(json.dumps(_build_meta(config, records), indent=2) + "\n", encoding="utf-8")
 
 
 def _print_summary(config: RunConfig, records: list[dict[str, object]], output_dir: Path) -> None:
@@ -880,13 +996,6 @@ def _build_config(args: argparse.Namespace) -> RunConfig:
     else:
         seed = _prompt_int("Optional seed (blank for random)")
 
-    if args.output_dir:
-        output_dir = Path(args.output_dir).expanduser().resolve()
-    else:
-        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_dir = DEFAULT_OUTPUT_ROOT / stamp
-
-    output_dir.mkdir(parents=True, exist_ok=True)
     return RunConfig(
         start_date=start_date,
         end_date=end_date,
@@ -895,13 +1004,20 @@ def _build_config(args: argparse.Namespace) -> RunConfig:
         seed=seed,
         profile=profile,
         bank=bank,
-        output_dir=output_dir,
     )
+
+
+def _resolve_output_dir(args: argparse.Namespace) -> Path:
+    """Where the CLI writes — an explicit ``--output-dir`` or a timestamped run folder."""
+    if args.output_dir:
+        return Path(args.output_dir).expanduser().resolve()
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return DEFAULT_OUTPUT_ROOT / stamp
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generate dummy UPI / bank statement records as CSV and JSON."
+        description="Generate synthetic UPI / bank statement records as CSV and JSON."
     )
     parser.add_argument("-y", "--yes", action="store_true", help="Use defaults without prompting")
     parser.add_argument(
@@ -938,12 +1054,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    config = _build_config(args)
+    config = _build_config(args)  # interactive/CLI resolution
+    output_dir = _resolve_output_dir(args)
     records = _generate_records(config)
-    _write_csv(config.output_dir / "statement.csv", records)
-    _write_json(config.output_dir / "statement.json", records)
-    _write_meta(config.output_dir / "meta.json", config, records)
-    _print_summary(config, records, config.output_dir)
+    statement = Statement(records=records, meta=_build_meta(config, records))
+    statement.write(output_dir)  # same in-memory path as generate() → identical files
+    _print_summary(config, records, output_dir)
     return 0
 
 
