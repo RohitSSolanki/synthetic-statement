@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>synthetic-statement — generate a fake bank / UPI statement in your browser</title>
+  <meta name="description" content="Generate realistic synthetic bank & UPI statements (JSON / CSV / PDF) entirely in your browser. For testing, demos and development — never to deceive." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <h1>synthetic&#8209;statement</h1>
+      <p class="tagline">
+        Generate a realistic <strong>synthetic</strong> bank &amp; UPI statement — as
+        <strong>JSON</strong>, <strong>CSV</strong> or a rendered <strong>PDF</strong> —
+        entirely in your browser. Nothing is uploaded; the generator runs on your own machine
+        via <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> (Python&nbsp;in&nbsp;WebAssembly).
+      </p>
+    </header>
+
+    <aside class="disclaimer" role="note" aria-label="Usage disclaimer">
+      <span class="disclaimer-badge">SYNTHETIC</span>
+      <p>
+        For <strong>testing, demos and development only.</strong> Every statement produced here is
+        <strong>fake</strong> and clearly synthetic. It is <strong>not</strong> a real financial document —
+        do not use it to misrepresent anyone's finances or to deceive. Rendered PDFs carry a
+        <em>&ldquo;SYNTHETIC SAMPLE&rdquo;</em> watermark.
+      </p>
+    </aside>
+
+    <form id="gen-form" class="card">
+      <div class="grid">
+        <label class="field">
+          <span>Spending profile</span>
+          <select name="profile" id="profile">
+            <option value="salary-heavy">salary-heavy — salaried, mostly merchant debits</option>
+            <option value="family-expense" selected>family-expense — groceries, bills, fuel, medicines</option>
+            <option value="student">student — smaller spends, food/transport/peer transfers</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Bank</span>
+          <select name="bank" id="bank">
+            <option value="random" selected>random</option>
+            <option>HDFC Bank</option>
+            <option>ICICI Bank</option>
+            <option>SBI</option>
+            <option>Axis Bank</option>
+            <option>Kotak Mahindra Bank</option>
+            <option>IndusInd Bank</option>
+            <option>Federal Bank</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Period <small>(used when no dates are set)</small></span>
+          <select name="period" id="period">
+            <option value="weekly">weekly (7 days)</option>
+            <option value="monthly">monthly (~30 days)</option>
+            <option value="quarterly" selected>quarterly (~90 days)</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Seed <small>(fixed → reproducible)</small></span>
+          <input type="number" name="seed" id="seed" value="42" step="1" />
+        </label>
+
+        <label class="field">
+          <span>Start date <small>(optional)</small></span>
+          <input type="date" name="start" id="start" />
+        </label>
+
+        <label class="field">
+          <span>End date <small>(optional)</small></span>
+          <input type="date" name="end" id="end" />
+        </label>
+
+        <label class="field">
+          <span>Monthly income <small>(₹)</small></span>
+          <input type="number" name="income" id="income" value="120000" min="1" step="1000" />
+        </label>
+
+        <label class="field">
+          <span>Monthly expense <small>(₹)</small></span>
+          <input type="number" name="expense" id="expense" value="90000" min="1" step="1000" />
+        </label>
+      </div>
+
+      <fieldset class="formats">
+        <legend>Output format</legend>
+        <label class="radio"><input type="radio" name="format" value="json" checked /> JSON <small>raw txn data</small></label>
+        <label class="radio"><input type="radio" name="format" value="csv" /> CSV <small>raw txn data</small></label>
+        <label class="radio"><input type="radio" name="format" value="pdf" /> PDF <small>rendered statement</small></label>
+      </fieldset>
+
+      <label class="field field-app" id="app-field" hidden>
+        <span>Statement app <small>(PDF layout)</small></span>
+        <select name="app" id="app">
+          <option value="phonepe" selected>PhonePe</option>
+          <option value="paytm">Paytm</option>
+          <option value="gpay">Google Pay</option>
+        </select>
+      </label>
+
+      <div class="actions">
+        <button type="submit" id="generate" disabled>Generate</button>
+        <span class="status" id="status" role="status" aria-live="polite">Loading Python runtime…</span>
+      </div>
+    </form>
+
+    <section class="card result" id="result" hidden>
+      <div class="result-head">
+        <h2 id="result-title">Preview</h2>
+        <a class="download" id="download" href="#" download>Download</a>
+      </div>
+      <pre class="preview" id="preview" aria-label="Statement preview"></pre>
+      <p class="result-note" id="result-note"></p>
+    </section>
+
+    <footer class="foot">
+      <p>
+        Open source · <a href="https://github.com/RohitSSolanki/synthetic-statement" target="_blank" rel="noopener">GitHub</a>
+        · MIT · Runs 100% client&#8209;side — no server, nothing uploaded.
+      </p>
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

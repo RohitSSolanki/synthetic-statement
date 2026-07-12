@@ -1,0 +1,154 @@
+/* synthetic-statement — hosted demo. Minimal, self-contained, theme-aware. */
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --ink: #1a1d24;
+  --muted: #626b7a;
+  --line: #e3e6eb;
+  --accent: #4f46e5;
+  --accent-ink: #ffffff;
+  --warn-bg: #fff7ed;
+  --warn-line: #fdba74;
+  --warn-ink: #7c2d12;
+  --badge: #b45309;
+  --radius: 12px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --ink: #e8eaed;
+    --muted: #9aa3b2;
+    --line: #262b34;
+    --accent: #7c7bff;
+    --accent-ink: #0f1115;
+    --warn-bg: #2a1c0f;
+    --warn-line: #7c4a1e;
+    --warn-ink: #fcd9b0;
+    --badge: #f59e0b;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); }
+.wrap { max-width: 820px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+
+.hero h1 {
+  margin: 0 0 .35rem;
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  letter-spacing: -0.02em;
+}
+.tagline { margin: 0; color: var(--muted); max-width: 60ch; }
+
+.disclaimer {
+  display: flex;
+  gap: .85rem;
+  align-items: flex-start;
+  margin: 1.5rem 0;
+  padding: .9rem 1rem;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  border-radius: var(--radius);
+  color: var(--warn-ink);
+}
+.disclaimer p { margin: 0; font-size: .92rem; }
+.disclaimer-badge {
+  flex: none;
+  font: 700 .68rem/1 var(--mono);
+  letter-spacing: .12em;
+  color: var(--accent-ink);
+  background: var(--badge);
+  padding: .4rem .5rem;
+  border-radius: 6px;
+  margin-top: .1rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+@media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+
+.field { display: flex; flex-direction: column; gap: .35rem; }
+.field > span { font-size: .85rem; font-weight: 600; }
+.field small { font-weight: 400; color: var(--muted); }
+input, select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: .55rem .6rem;
+  width: 100%;
+}
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.formats {
+  margin: 1.25rem 0 0;
+  padding: .85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.formats legend { font-size: .85rem; font-weight: 600; padding: 0 .35rem; }
+.radio { display: inline-flex; align-items: center; gap: .4rem; margin-right: 1.25rem; }
+.radio small { color: var(--muted); }
+.field-app { margin-top: 1rem; max-width: 320px; }
+
+.actions { display: flex; align-items: center; gap: 1rem; margin-top: 1.25rem; flex-wrap: wrap; }
+button {
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  padding: .6rem 1.4rem;
+  cursor: pointer;
+}
+button:disabled { opacity: .55; cursor: progress; }
+.status { color: var(--muted); font-size: .9rem; }
+.status.err { color: #dc2626; }
+
+.result-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.result-head h2 { margin: 0; font-size: 1.05rem; }
+.download {
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: .45rem 1rem;
+}
+.preview {
+  margin: .9rem 0 0;
+  max-height: 340px;
+  overflow: auto;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: .8rem;
+  font: .82rem/1.5 var(--mono);
+  white-space: pre;
+}
+.result-note { margin: .6rem 0 0; color: var(--muted); font-size: .85rem; }
+
+.foot { margin-top: 2rem; color: var(--muted); font-size: .85rem; text-align: center; }
+.foot a { text-decoration: none; }
