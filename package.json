@@ -1,0 +1,13 @@
+{
+  "name": "synthetic-statement-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-demo tooling for synthetic-statement (docs/). E2E smoke test only — the generator itself is the Python package and is tested with pytest.",
+  "scripts": {
+    "test:e2e": "node tools/e2e.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.6.0"
+  }
+}

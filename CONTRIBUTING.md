@@ -16,6 +16,23 @@ pip install -e ".[pdf,dev]"   # core is pure-stdlib; [pdf]=reportlab, [dev]=pyte
 ./selftest.sh                 # end-to-end smoke (generate + verify)
 ```
 
+### Browser demo (`docs/`)
+
+The hosted demo runs the generator in-browser via Pyodide. A browser smoke test
+drives the real page (modal flow → JSON/CSV/PDF generation) and validates the
+downloaded bytes — it covers what pytest can't (the Pyodide load, the wheel
+install, and the modal state machine):
+
+```bash
+npm install                   # dev-only: puppeteer-core (no bundled Chrome)
+npm run test:e2e              # needs a Chrome/Chromium + network (CDN); ~2–4 min
+```
+
+It uses a system Chrome (auto-detected, or set `CHROME_PATH`). It's a manual
+pre-deploy check, **not** a per-push CI gate — the ~10 MB Pyodide download makes
+it too slow to run on every commit. The deployed site is static `docs/` only;
+`node_modules/` never ships.
+
 ## Conventions
 
 - **Data over code.** Merchants, persons, employers, banks and consumption
