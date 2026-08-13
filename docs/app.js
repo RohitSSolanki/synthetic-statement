@@ -5,6 +5,9 @@
  * generator in the visitor's browser. Nothing is uploaded; compute is 100%
  * client-side. reportlab (for PDF) is installed lazily on first PDF request.
  *
+ * The runtime itself is loaded lazily too — only when the generator modal opens
+ * — so the landing paints instantly and the ~10 MB download waits until engaged.
+ *
  * The Python below is the single source of truth for the in-browser build and
  * is exercised verbatim by tools/verify (see .scratch): keep it self-contained.
  */
@@ -66,74 +69,113 @@ def _build(opts_json):
 // --- browser wiring (skipped under Node verification — no document) ------------
 if (typeof document !== "undefined") {
   const $ = (id) => document.getElementById(id);
-  const statusEl = $("status");
-  const genBtn = $("generate");
+
+  // Global error boundary — any UNCAUGHT error surfaces a friendly overlay
+  // instead of a silently-broken page. (Generation errors are handled inline.)
+  const boundary = $("error-boundary");
+  const showBoundary = (msg) => {
+    if (!boundary) return;
+    $("eb-msg").textContent =
+      (msg ? msg + " " : "") + "Your data never left your browser. Reloading fixes most issues.";
+    boundary.hidden = false;
+  };
+  window.addEventListener("error", (e) => showBoundary(e.message));
+  window.addEventListener("unhandledrejection", (e) =>
+    showBoundary(e.reason && e.reason.message ? e.reason.message : "")
+  );
+  $("eb-reload").addEventListener("click", () => location.reload());
+
+  const modal = $("gen-modal");
   const form = $("gen-form");
-  const appField = $("app-field");
-  const resultEl = $("result");
+  const genBtn = $("generate");
+  const statusEl = $("status");
+  const runtimeHint = $("runtime-hint");
+  const busySub = $("busy-sub");
   const previewEl = $("preview");
+  const previewBtn = $("preview-btn");
   const titleEl = $("result-title");
   const noteEl = $("result-note");
   const downloadEl = $("download");
+  const errMsgEl = $("err-msg");
 
-  let pyodide = null;
-  let reportlabReady = false;
-  let downloadUrl = null;
-
+  const setView = (v) => { modal.dataset.view = v; };
   const setStatus = (msg, isErr = false) => {
     statusEl.textContent = msg;
     statusEl.classList.toggle("err", isErr);
   };
 
-  // Toggle the PDF-only "app" picker.
-  form.addEventListener("change", (e) => {
-    if (e.target.name === "format") {
-      appField.hidden = form.format.value !== "pdf";
-    }
-  });
+  // ---- lazy runtime -----------------------------------------------------------
+  let pyodide = null;
+  let reportlabReady = false;
+  let downloadUrl = null;
+  let runtimePromise = null; // in-flight/settled load; null = not started or reset
 
-  async function init() {
-    try {
+  const loadScript = (src) =>
+    new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = res;
+      s.onerror = () => rej(new Error("Could not load the Python runtime (network?)."));
+      document.head.appendChild(s);
+    });
+
+  function ensureRuntime() {
+    if (runtimePromise) return runtimePromise;
+    runtimeHint.classList.remove("err");
+    runtimeHint.textContent = "Preparing the runtime…";
+    setStatus("Preparing runtime…");
+    runtimePromise = (async () => {
+      await loadScript(`https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/pyodide.js`);
       pyodide = await loadPyodide({
         indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`,
       });
-      setStatus("Installing generator…");
       await pyodide.loadPackage("micropip");
       const micropip = pyodide.pyimport("micropip");
-      const wheelUrl = new URL(WHEEL, document.baseURI).href;
-      await micropip.install(wheelUrl);
+      await micropip.install(new URL(WHEEL, document.baseURI).href);
       await pyodide.runPythonAsync(PY_BOOTSTRAP);
-      genBtn.disabled = false;
-      setStatus("Ready — pick options and generate.");
-    } catch (err) {
-      setStatus("Failed to load the runtime: " + err.message, true);
-      console.error(err);
-    }
+    })();
+    runtimePromise.then(
+      () => { runtimeHint.textContent = ""; setStatus("Ready — nothing is uploaded."); },
+      (err) => {
+        runtimePromise = null; // allow a retry
+        runtimeHint.textContent = "Runtime failed to load — you can still open it and retry.";
+        runtimeHint.classList.add("err");
+        setStatus(err.message || "Runtime failed to load.", true);
+      }
+    );
+    return runtimePromise;
   }
 
   async function ensureReportlab() {
     if (reportlabReady) return;
-    setStatus("Installing PDF renderer (first time)…");
+    busySub.textContent = "Installing the PDF renderer (first time)…";
     const micropip = pyodide.pyimport("micropip");
     await micropip.install("reportlab");
     reportlabReady = true;
   }
 
+  // ---- modal open/close -------------------------------------------------------
+  const openModal = () => {
+    setView("form");
+    modal.showModal();
+    genBtn.disabled = false;
+    ensureRuntime(); // warm it while they pick options
+  };
+  const closeModal = () => modal.close();
+
+  $("open-gen").addEventListener("click", openModal);
+  $("close-gen").addEventListener("click", closeModal);
+  // click on the backdrop (the dialog element itself, outside its content) closes it
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+  // ---- collect + generate -----------------------------------------------------
   function collectOptions() {
     const fd = new FormData(form);
     return {
-      profile: fd.get("profile"),
-      bank: fd.get("bank"),
-      country: fd.get("country"),
-      currency: fd.get("currency"),
-      period: fd.get("period"),
-      seed: fd.get("seed"),
-      start: fd.get("start"),
-      end: fd.get("end"),
-      income: fd.get("income"),
-      expense: fd.get("expense"),
-      format: fd.get("format"),
-      app: fd.get("app"),
+      profile: fd.get("profile"), bank: fd.get("bank"), country: fd.get("country"),
+      currency: fd.get("currency"), period: fd.get("period"), seed: fd.get("seed"),
+      start: fd.get("start"), end: fd.get("end"), income: fd.get("income"),
+      expense: fd.get("expense"), format: fd.get("format"), app: fd.get("app"),
     };
   }
 
@@ -154,12 +196,11 @@ if (typeof document !== "undefined") {
     downloadEl.textContent = "Download " + res.filename;
   }
 
-  function showPreview(res) {
-    titleEl.textContent = res.filename;
+  function fillPreview(res) {
     if (res.kind === "binary") {
       previewEl.textContent =
         `[ ${res.filename} — ${(res.bytes / 1024).toFixed(1)} KB, ${res.rows} transactions ]\n\n` +
-        "Binary PDF — use the Download button to open it.\n" +
+        "Binary PDF — use Download to open it.\n" +
         "The rendered statement carries a “SYNTHETIC SAMPLE” watermark.";
     } else if (res.mime === "text/csv") {
       const lines = res.text.split("\n");
@@ -169,33 +210,44 @@ if (typeof document !== "undefined") {
       const head = res.text.slice(0, 1600);
       previewEl.textContent = head + (res.text.length > 1600 ? `\n… (${res.rows} transactions total)` : "");
     }
-    noteEl.textContent = `${res.rows} transactions generated in your browser — nothing was uploaded.`;
-    resultEl.hidden = false;
   }
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!pyodide) return;
-    genBtn.disabled = true;
+  async function runGenerate() {
+    setView("busy");
+    busySub.textContent = "Running Python in your browser — nothing leaves your machine.";
     const opts = collectOptions();
     try {
+      if (!runtimePromise) ensureRuntime();
+      busySub.textContent = "Preparing the runtime…";
+      await runtimePromise;
       if (opts.format === "pdf") await ensureReportlab();
-      setStatus("Generating…");
+      busySub.textContent = "Generating…";
       pyodide.globals.set("OPTS_JSON", JSON.stringify(opts));
-      const raw = await pyodide.runPythonAsync("_build(OPTS_JSON)");
-      const res = JSON.parse(raw);
+      const res = JSON.parse(await pyodide.runPythonAsync("_build(OPTS_JSON)"));
       offerDownload(res);
-      showPreview(res);
-      setStatus("Done.");
+      fillPreview(res);
+      titleEl.textContent = res.filename + " is ready";
+      noteEl.textContent = `${res.rows} transactions generated in your browser — nothing was uploaded.`;
+      previewEl.hidden = true;
+      previewBtn.textContent = "Preview";
+      setView("result");
     } catch (err) {
-      setStatus("Generation failed: " + err.message, true);
+      errMsgEl.textContent = err && err.message ? err.message : "Generation failed unexpectedly.";
+      setView("error");
       console.error(err);
-    } finally {
-      genBtn.disabled = false;
     }
-  });
+  }
 
-  init();
+  form.addEventListener("submit", (e) => { e.preventDefault(); runGenerate(); });
+
+  // ---- result / error controls ------------------------------------------------
+  previewBtn.addEventListener("click", () => {
+    previewEl.hidden = !previewEl.hidden;
+    previewBtn.textContent = previewEl.hidden ? "Preview" : "Hide preview";
+  });
+  $("back-form").addEventListener("click", () => setView("form"));
+  $("back-form-2").addEventListener("click", () => setView("form"));
+  $("retry").addEventListener("click", runGenerate);
 }
 
 // Exposed for the Node verification harness.

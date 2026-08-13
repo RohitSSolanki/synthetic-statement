@@ -26,33 +26,61 @@
 </head>
 <body>
   <main class="wrap">
+    <!-- ================= LANDING ================= -->
     <header class="hero">
+      <span class="eyebrow">Synthetic · sample data</span>
       <h1>Synthetic Statement</h1>
       <p class="tagline">
         Generate a realistic <strong>synthetic</strong> bank &amp; UPI statement — as
         <strong>JSON</strong>, <strong>CSV</strong> or a rendered <strong>PDF</strong> —
-        entirely in your browser. Nothing is uploaded; the generator runs on your own machine
-        via <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> (Python&nbsp;in&nbsp;WebAssembly).
+        entirely in your browser. Nothing is uploaded; the generator runs on your own machine.
       </p>
+
+      <ul class="chips" aria-label="Highlights">
+        <li class="chip"><span class="chip-i" aria-hidden="true">🔒</span> 100% in your browser · nothing uploaded</li>
+        <li class="chip"><span class="chip-i" aria-hidden="true">⇩</span> JSON · CSV · PDF</li>
+        <li class="chip"><span class="chip-i" aria-hidden="true">▦</span> PhonePe · Paytm · GPay layouts</li>
+      </ul>
+
+      <div class="cta-row">
+        <button type="button" id="open-gen" class="btn btn-primary btn-lg">Generate a statement</button>
+        <span class="runtime-hint" id="runtime-hint"></span>
+      </div>
     </header>
 
     <aside class="disclaimer" role="note" aria-label="Usage disclaimer">
       <span class="disclaimer-badge">SYNTHETIC</span>
       <p>
-        For <strong>testing, demos and development only.</strong> Every statement produced here is
-        <strong>fake</strong> and clearly synthetic. It is <strong>not</strong> a real financial document —
-        do not use it to misrepresent anyone's finances or to deceive. Rendered PDFs carry a
+        For <strong>testing, demos and development only.</strong> Every statement is
+        <strong>fake</strong> and clearly synthetic — <strong>not</strong> a real financial document.
+        Don't use it to misrepresent anyone's finances or to deceive. Rendered PDFs carry a
         <em>&ldquo;SYNTHETIC SAMPLE&rdquo;</em> watermark.
       </p>
     </aside>
 
-    <form id="gen-form" class="card">
+    <footer class="foot">
+      <p>
+        Open source · <a href="https://github.com/RohitSSolanki/synthetic-statement" target="_blank" rel="noopener">GitHub</a>
+        · MIT · Runs 100% client&#8209;side — no server, nothing uploaded.
+      </p>
+    </footer>
+  </main>
+
+  <!-- ================= GENERATOR MODAL (single dialog, 4 view states) ================= -->
+  <dialog id="gen-modal" data-view="form" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <h2 id="modal-title">Generate a statement</h2>
+      <button type="button" class="modal-x" id="close-gen" aria-label="Close">&#10005;</button>
+    </div>
+
+    <!-- ---- FORM VIEW ---- -->
+    <form id="gen-form" class="view view-form" novalidate>
       <div class="grid">
         <label class="field">
           <span>Spending profile</span>
           <select name="profile" id="profile">
             <option value="salary-heavy">Salary-heavy — salaried, mostly merchant debits</option>
-            <option value="family-expense" selected>Family-expense — groceries, bills, fuel, medicines</option>
+            <option value="family-expense" selected>Family-expense — groceries, bills, fuel</option>
             <option value="student">Student — smaller spends, food/transport/peer transfers</option>
           </select>
         </label>
@@ -106,40 +134,31 @@
             <option value="quarterly" selected>Quarterly (~90 days)</option>
           </select>
         </label>
-
-        <label class="field">
-          <span>Seed <small>(fixed → reproducible)</small></span>
-          <input type="number" name="seed" id="seed" value="42" step="1" />
-        </label>
-
-        <label class="field">
-          <span>Start date <small>(optional)</small></span>
-          <input type="date" name="start" id="start" />
-        </label>
-
-        <label class="field">
-          <span>End date <small>(optional)</small></span>
-          <input type="date" name="end" id="end" />
-        </label>
-
-        <label class="field">
-          <span>Monthly income <small>(blank = currency default)</small></span>
-          <input type="number" name="income" id="income" placeholder="auto" min="1" step="100" />
-        </label>
-
-        <label class="field">
-          <span>Monthly expense <small>(blank = currency default)</small></span>
-          <input type="number" name="expense" id="expense" placeholder="auto" min="1" step="100" />
-        </label>
       </div>
 
-      <fieldset class="formats">
+      <!-- Output format — segmented control (fixes the old wrapped-label bug) -->
+      <fieldset class="seg" aria-label="Output format">
         <legend>Output format</legend>
-        <label class="radio"><input type="radio" name="format" value="json" checked /> JSON <small>raw txn data</small></label>
-        <label class="radio"><input type="radio" name="format" value="csv" /> CSV <small>raw txn data</small></label>
-        <label class="radio"><input type="radio" name="format" value="pdf" /> PDF <small>rendered statement</small></label>
+        <div class="seg-track">
+          <label class="seg-opt">
+            <input type="radio" name="format" value="json" checked />
+            <span class="seg-title">JSON</span>
+            <span class="seg-desc">raw transaction data</span>
+          </label>
+          <label class="seg-opt">
+            <input type="radio" name="format" value="csv" />
+            <span class="seg-title">CSV</span>
+            <span class="seg-desc">spreadsheet-ready</span>
+          </label>
+          <label class="seg-opt">
+            <input type="radio" name="format" value="pdf" />
+            <span class="seg-title">PDF</span>
+            <span class="seg-desc">rendered statement</span>
+          </label>
+        </div>
       </fieldset>
 
+      <!-- PDF-only: statement app layout -->
       <label class="field field-app" id="app-field" hidden>
         <span>Statement app <small>(PDF layout)</small></span>
         <select name="app" id="app">
@@ -149,30 +168,81 @@
         </select>
       </label>
 
-      <div class="actions">
-        <button type="submit" id="generate" disabled>Generate</button>
-        <span class="status" id="status" role="status" aria-live="polite">Loading Python runtime…</span>
+      <!-- Progressive disclosure: advanced knobs stay out of the way -->
+      <details class="more">
+        <summary>More options</summary>
+        <div class="grid">
+          <label class="field">
+            <span>Seed <small>(fixed → reproducible)</small></span>
+            <input type="number" name="seed" id="seed" value="42" step="1" />
+          </label>
+          <label class="field">
+            <span>Start date <small>(optional)</small></span>
+            <input type="date" name="start" id="start" />
+          </label>
+          <label class="field">
+            <span>End date <small>(optional)</small></span>
+            <input type="date" name="end" id="end" />
+          </label>
+          <label class="field">
+            <span>Monthly income <small>(blank = default)</small></span>
+            <input type="number" name="income" id="income" placeholder="auto" min="1" step="100" />
+          </label>
+          <label class="field">
+            <span>Monthly expense <small>(blank = default)</small></span>
+            <input type="number" name="expense" id="expense" placeholder="auto" min="1" step="100" />
+          </label>
+        </div>
+      </details>
+
+      <div class="form-actions">
+        <button type="submit" id="generate" class="btn btn-primary" disabled>Generate</button>
+        <span class="status" id="status" role="status" aria-live="polite">Preparing runtime…</span>
       </div>
     </form>
 
-    <section class="card result" id="result" hidden>
-      <div class="result-head">
-        <h2 id="result-title">Preview</h2>
-        <a class="download" id="download" href="#" download>Download</a>
-      </div>
-      <pre class="preview" id="preview" aria-label="Statement preview"></pre>
+    <!-- ---- BUSY (placeholder) VIEW ---- -->
+    <div class="view view-busy" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="busy-title">Generating statement…</p>
+      <p class="busy-sub" id="busy-sub">Running Python in your browser — nothing leaves your machine.</p>
+    </div>
+
+    <!-- ---- RESULT VIEW ---- -->
+    <div class="view view-result">
+      <div class="result-icon ok" aria-hidden="true">&#10003;</div>
+      <h3 id="result-title">Statement ready</h3>
       <p class="result-note" id="result-note"></p>
-    </section>
+      <div class="result-cta">
+        <a class="btn btn-primary" id="download" href="#" download>Download</a>
+        <button type="button" class="btn btn-ghost" id="preview-btn">Preview</button>
+      </div>
+      <pre class="preview" id="preview" aria-label="Statement preview" hidden></pre>
+      <button type="button" class="btn btn-text" id="back-form">← Generate another</button>
+    </div>
 
-    <footer class="foot">
-      <p>
-        Open source · <a href="https://github.com/RohitSSolanki/synthetic-statement" target="_blank" rel="noopener">GitHub</a>
-        · MIT · Runs 100% client&#8209;side — no server, nothing uploaded.
-      </p>
-    </footer>
-  </main>
+    <!-- ---- ERROR VIEW ---- -->
+    <div class="view view-error">
+      <div class="result-icon err" aria-hidden="true">&#33;</div>
+      <h3>Couldn't generate that</h3>
+      <p class="err-msg" id="err-msg"></p>
+      <div class="result-cta">
+        <button type="button" class="btn btn-primary" id="retry">Try again</button>
+        <button type="button" class="btn btn-ghost" id="back-form-2">Back to options</button>
+      </div>
+    </div>
+  </dialog>
 
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+  <!-- ================= GLOBAL ERROR BOUNDARY ================= -->
+  <div id="error-boundary" hidden role="alertdialog" aria-labelledby="eb-title" aria-describedby="eb-msg">
+    <div class="eb-card">
+      <div class="result-icon err" aria-hidden="true">&#33;</div>
+      <h2 id="eb-title">The page hit an unexpected error</h2>
+      <p id="eb-msg">An unexpected error interrupted the tool. Your data never left your browser.</p>
+      <button type="button" class="btn btn-primary" id="eb-reload">Reload the page</button>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
