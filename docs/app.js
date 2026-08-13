@@ -37,7 +37,7 @@ def _build(opts_json):
         kw["income"] = float(o["income"])
     if o.get("expense") not in (None, ""):
         kw["expense"] = float(o["expense"])
-    if o.get("start") and o.get("end"):
+    if o.get("period") == "custom" and o.get("start") and o.get("end"):
         kw["start"] = o["start"]
         kw["end"] = o["end"]
     elif o.get("period"):

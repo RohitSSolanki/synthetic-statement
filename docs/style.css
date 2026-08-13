@@ -258,6 +258,10 @@ select {
 .field-app { display: none; margin-top: 1rem; max-width: 320px; }
 #gen-form:has(input[value="pdf"]:checked) .field-app { display: flex; }
 
+/* Custom date range — hidden unless Period = Custom (CSS :has on the selected option). */
+.custom-dates { display: none; margin-top: 1rem; }
+#gen-form:has(#period option[value="custom"]:checked) .custom-dates { display: block; }
+
 .more { margin-top: 1.1rem; border-top: 1px solid var(--line); padding-top: .9rem; }
 .more > summary {
   cursor: pointer;

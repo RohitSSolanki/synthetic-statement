@@ -353,26 +353,31 @@ def _choose_period(prompt_enabled: bool, provided: str | None) -> str:
     print("  2) monthly")
     print("  3) quarterly")
     print("  4) annually")
-    print("  5) custom range")
+    print("  5) financial year")
+    print("  6) custom range")
     while True:
-        choice = _prompt("Period", default="3")
+        choice = _prompt("Period", default="4")
         mapping = {
             "1": "weekly",
             "2": "monthly",
             "3": "quarterly",
             "4": "annually",
-            "5": "custom",
+            "5": "fiscal",
+            "6": "custom",
             "weekly": "weekly",
             "monthly": "monthly",
             "quarterly": "quarterly",
             "annually": "annually",
             "annual": "annually",
+            "fiscal": "fiscal",
+            "fy": "fiscal",
+            "financial": "fiscal",
             "custom": "custom",
         }
         selected = mapping.get(choice.lower())
         if selected:
             return selected
-        print("Please choose 1, 2, 3, 4, 5, or one of the named options.")
+        print("Please choose 1-6, or one of the named options.")
 
 
 def _choose_profile(prompt_enabled: bool, provided: str | None) -> str:
@@ -434,6 +439,20 @@ def _choose_bank(prompt_enabled: bool, provided: str | None) -> str:
 def _rolling_start(end_date: date, period: str) -> date:
     days = {"weekly": 6, "monthly": 29, "quarterly": 89, "annually": 364}[period]
     return end_date - timedelta(days=days)
+
+
+def _fiscal_window(today: date, country: str) -> tuple[date, date]:
+    """The most recent COMPLETE fiscal year for the country, as (start, end).
+
+    India runs Apr 1 → Mar 31; elsewhere (US / default) it is the calendar / tax
+    year, Jan 1 → Dec 31. "Most recent complete" so the statement is a full twelve
+    months, not a partial year-to-date.
+    """
+    if country == "india":
+        if (today.month, today.day) >= (4, 1):
+            return date(today.year - 1, 4, 1), date(today.year, 3, 31)
+        return date(today.year - 2, 4, 1), date(today.year - 1, 3, 31)
+    return date(today.year - 1, 1, 1), date(today.year - 1, 12, 31)
 
 
 def _month_windows(start: date, end: date) -> list[tuple[date, date]]:
@@ -920,6 +939,7 @@ def _config_from_options(
 ) -> RunConfig:
     """Resolve library options into a :class:`RunConfig` — non-interactive, pure."""
     today = today or datetime.now().date()
+    country_key = _validate_country(country) if country else DEFAULT_COUNTRY
     if range:
         start_date, end_date = _parse_range(range)
     elif start or end:
@@ -933,10 +953,11 @@ def _config_from_options(
         resolved_period = _choose_period(False, period)
         if resolved_period == "custom":
             start_date, end_date = today - timedelta(days=29), today
+        elif resolved_period in ("fiscal", "fy", "financial"):
+            start_date, end_date = _fiscal_window(today, country_key)
         else:
             end_date = today
             start_date = _rolling_start(end_date, resolved_period)
-    country_key = _validate_country(country) if country else DEFAULT_COUNTRY
     currency_key = _validate_currency(currency) if currency else COUNTRY_DEFAULT_CURRENCY[country_key]
     cur = _resolve_currency(currency_key)
     return RunConfig(

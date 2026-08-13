@@ -299,3 +299,30 @@ def test_statement_write_produces_the_three_files(tmp_path):
 def test_generate_requires_start_and_end_together():
     with pytest.raises(ValueError):
         generator.generate(start="2026-01-01")  # end missing
+
+
+@pytest.mark.parametrize(
+    "today,country,expected",
+    [
+        # India FY = Apr 1 → Mar 31; most recent COMPLETE year.
+        (date(2026, 8, 13), "india", (date(2025, 4, 1), date(2026, 3, 31))),
+        (date(2026, 4, 1), "india", (date(2025, 4, 1), date(2026, 3, 31))),  # on Apr 1 boundary
+        (date(2026, 3, 31), "india", (date(2024, 4, 1), date(2025, 3, 31))),  # day before
+        # US / default = calendar (tax) year, last complete.
+        (date(2026, 8, 13), "usa", (date(2025, 1, 1), date(2025, 12, 31))),
+        (date(2026, 1, 1), "usa", (date(2025, 1, 1), date(2025, 12, 31))),
+    ],
+)
+def test_fiscal_window(today, country, expected):
+    assert generator._fiscal_window(today, country) == expected
+
+
+def test_fiscal_period_resolves_country_aware():
+    cfg_in = generator._config_from_options(
+        period="fiscal", country="india", today=date(2026, 8, 13)
+    )
+    assert (cfg_in.start_date, cfg_in.end_date) == (date(2025, 4, 1), date(2026, 3, 31))
+    cfg_us = generator._config_from_options(
+        period="fiscal", country="usa", today=date(2026, 8, 13)
+    )
+    assert (cfg_us.start_date, cfg_us.end_date) == (date(2025, 1, 1), date(2025, 12, 31))

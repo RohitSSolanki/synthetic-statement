@@ -127,13 +127,30 @@
         </label>
 
         <label class="field">
-          <span>Period <small>(used when no dates are set)</small></span>
+          <span>Period</span>
           <select name="period" id="period">
             <option value="weekly">Weekly (7 days)</option>
             <option value="monthly">Monthly (~30 days)</option>
-            <option value="quarterly" selected>Quarterly (~90 days)</option>
+            <option value="quarterly">Quarterly (~90 days)</option>
+            <option value="annually" selected>Annually (last 12 months)</option>
+            <option value="fiscal">Financial year (Apr–Mar · tax year in US)</option>
+            <option value="custom">Custom (pick dates)</option>
           </select>
         </label>
+      </div>
+
+      <!-- Custom range — revealed only when Period = Custom (CSS :has, no JS) -->
+      <div class="custom-dates">
+        <div class="grid">
+          <label class="field">
+            <span>Start date</span>
+            <input type="date" name="start" id="start" />
+          </label>
+          <label class="field">
+            <span>End date</span>
+            <input type="date" name="end" id="end" />
+          </label>
+        </div>
       </div>
 
       <!-- Output format — segmented control (fixes the old wrapped-label bug) -->
@@ -176,14 +193,6 @@
             <span>Sample number <small>(same number → same statement)</small></span>
             <input type="number" name="seed" id="seed" value="42" step="1"
               title="A sample number (a random seed): keep it to regenerate an identical statement, or change it for a different one." />
-          </label>
-          <label class="field">
-            <span>Start date <small>(optional)</small></span>
-            <input type="date" name="start" id="start" />
-          </label>
-          <label class="field">
-            <span>End date <small>(optional)</small></span>
-            <input type="date" name="end" id="end" />
           </label>
           <label class="field">
             <span>Monthly income <small>(blank = default)</small></span>
