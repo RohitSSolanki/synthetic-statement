@@ -81,7 +81,7 @@ BANK_INPUTS = ACCOUNT_BANKS + ["random"]
 
 DEFAULT_MONTHLY_INCOME = 120000.0
 DEFAULT_MONTHLY_EXPENSE = 90000.0
-DEFAULT_PERIOD = "quarterly"
+DEFAULT_PERIOD = "annually"
 DEFAULT_PROFILE = "salary-heavy"
 DEFAULT_BANK = "random"
 DEFAULT_OUTPUT_ROOT = Path(__file__).resolve().parent / "runs"
@@ -1089,6 +1089,8 @@ def _build_config(args: argparse.Namespace) -> RunConfig:
         else:
             start_date = _prompt_date("Custom range start", today - timedelta(days=29))
             end_date = _prompt_date("Custom range end", today)
+    elif period in ("fiscal", "fy", "financial"):
+        start_date, end_date = _fiscal_window(today, country)
     else:
         end_date = today
         start_date = _rolling_start(end_date, period)
@@ -1142,8 +1144,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-y", "--yes", action="store_true", help="Use defaults without prompting")
     parser.add_argument(
         "--period",
-        choices=["weekly", "monthly", "quarterly", "annually", "custom"],
-        help="Rolling period to generate when no explicit date range is provided",
+        choices=["weekly", "monthly", "quarterly", "annually", "fiscal", "custom"],
+        help="Period to generate when no explicit date range is provided "
+        "(fiscal = most recent complete financial year, country-aware)",
     )
     parser.add_argument(
         "--profile",
