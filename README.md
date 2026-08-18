@@ -61,6 +61,26 @@ persists the three files, with `meta.json` recording version/seed/options proven
 **byte-identical** output. The CLI is a thin caller of the same path — see `synthetic-statement --help` for
 date range, income/expense, bank and profile options.
 
+### Deterministic test fixtures
+
+Two opt-in options help downstream code exercise dedup / reconciliation paths; both leave the
+default output shape untouched:
+
+```python
+from synthetic_statement import generate, InjectedRow
+
+# Surface each record's rail refs as top-level JSON fields (they otherwise live
+# only inside the detail block), so a test can assert on a seeded run's UTRs.
+generate(seed=42, expose_refs=True).records[0]["utr"]
+
+# Append caller-controlled rows — e.g. a self-transfer's two legs sharing ONE UTR
+# (opposite directions), the shape a direction-aware de-duplicator must pair up.
+generate(seed=42, inject=[
+    InjectedRow(direction="debit",  amount=8000, counterparty="Savings A/C", utr="RRN...555"),
+    InjectedRow(direction="credit", amount=8000, counterparty="Current A/C", utr="RRN...555"),
+])
+```
+
 ## Statement format
 
 The emitted formats — the surface a downstream parser sees — are documented in

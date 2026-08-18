@@ -17,11 +17,12 @@ The CLI and ``generate()`` share one path, so their output never diverges. A
 fixed ``seed`` gives byte-identical results.
 """
 
-from .statement_generator import Statement, generate
+from .statement_generator import InjectedRow, Statement, generate
 
 __all__ = [
     "generate",
     "Statement",
+    "InjectedRow",
     "statement_generator",
     "render_statement",
     "verify_statement",

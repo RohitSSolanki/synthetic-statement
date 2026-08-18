@@ -264,6 +264,35 @@ PROFILE_SPECS = {
 
 
 @dataclass(frozen=True)
+class InjectedRow:
+    """A caller-supplied statement line, for building deterministic test fixtures.
+
+    Opt-in and absent from default output. Lets a consumer construct scenarios the
+    randomised generator can't produce on its own — most usefully two rows that
+    *deliberately share one rail reference* (``utr``): a re-uploaded duplicate, or
+    a self-transfer whose two legs (one ``debit`` + one ``credit``, same ``utr``)
+    must be recognised as a pair rather than two independent txns.
+
+    ``utr`` / ``txn_id`` default to a deterministic mint when omitted; the whole
+    point is usually to pass them explicitly so a test can assert on a known value.
+    Injected rows always surface ``utr``/``txn_id`` in the JSON records regardless
+    of ``expose_refs``.
+
+    ``ref`` (a reconcile reference echoed into the payee region) is reserved for a
+    later scope and raises if used — see ``.scratch/tasks/emit-matchable-rail-ref.md``.
+    """
+
+    direction: str  # "debit" | "credit"
+    amount: float
+    counterparty: str
+    utr: Optional[str] = None
+    txn_id: Optional[str] = None
+    ref: Optional[str] = None
+    date: Optional[str] = None  # YYYY-MM-DD; defaults to the middle of the window
+    time: Optional[str] = None  # HH:MM:SS; defaults to a fixed midday time
+
+
+@dataclass(frozen=True)
 class RunConfig:
     start_date: date
     end_date: date
@@ -274,6 +303,9 @@ class RunConfig:
     bank: str
     country: str = DEFAULT_COUNTRY
     currency: str = "inr"
+    # Opt-in test-fixture affordances — no effect on the default output shape.
+    expose_refs: bool = False
+    inject: tuple["InjectedRow", ...] = ()
 
 
 def _parse_amount(raw: str, label: str) -> float:
@@ -755,6 +787,8 @@ def _generate_month_segment(
                 ),
                 "type": "credit",
                 "amount": amount,
+                "_utr": utr_no,
+                "_txn_id": txn_id,
                 "_sort_key": f"{txn_day.isoformat()} {index:03d} {index:03d}",
             }
         )
@@ -825,11 +859,61 @@ def _generate_month_segment(
                 ),
                 "type": "debit",
                 "amount": amount,
+                "_utr": utr_no,
+                "_txn_id": txn_id,
                 "_sort_key": f"{txn_day.isoformat()} {100 + index:03d} {index:03d}",
             }
         )
 
     return txns
+
+
+def _build_injected_rows(
+    config: RunConfig, account_header: str
+) -> list[dict[str, object]]:
+    """Materialise the opt-in :class:`InjectedRow` fixtures into canonical records.
+
+    Each becomes a normal 4-line detail block (renderer/parser compatible), tagged
+    so it always surfaces its ``utr``/``txn_id``. A dedicated RNG (offset from the
+    run seed) mints any omitted ref, so injecting rows never perturbs the seeded
+    output of the generated rows.
+    """
+    if not config.inject:
+        return []
+    mint_rng = random.Random((config.seed or 0) + 10_000)
+    mid = config.start_date + timedelta(days=(config.end_date - config.start_date).days // 2)
+    rows: list[dict[str, object]] = []
+    for order, spec in enumerate(config.inject, start=1):
+        if spec.ref is not None:
+            raise NotImplementedError(
+                "InjectedRow.ref (reconcile-ref echo) is deferred to a later scope; "
+                "see .scratch/tasks/emit-matchable-rail-ref.md"
+            )
+        if spec.direction not in ("debit", "credit"):
+            raise ValueError(f"InjectedRow.direction must be 'debit'/'credit', got {spec.direction!r}")
+        day = _parse_date(spec.date, "InjectedRow.date") if spec.date else mid
+        txn_id = spec.txn_id if spec.txn_id is not None else _txn_id(mint_rng, day, 900 + order)
+        utr_no = spec.utr if spec.utr is not None else _utr_no(mint_rng, day, 900 + order)
+        rows.append(
+            {
+                "date": day.isoformat(),
+                "time": spec.time or "12:00:00",
+                "Transaction Detail": _detail_block(
+                    direction=spec.direction,
+                    counterparty=spec.counterparty,
+                    txn_id=txn_id,
+                    utr_no=utr_no,
+                    account_header=account_header,
+                ),
+                "type": spec.direction,
+                "amount": float(spec.amount),
+                "_utr": utr_no,
+                "_txn_id": txn_id,
+                "_injected": True,
+                "_sort_key": f"{day.isoformat()} {900 + order:03d} {order:03d}",
+            }
+        )
+    return rows
 
 
 def _generate_records(config: RunConfig) -> list[dict[str, object]]:
@@ -861,9 +945,17 @@ def _generate_records(config: RunConfig) -> list[dict[str, object]]:
             )
         )
 
+    records.extend(_build_injected_rows(config, account_header))
     records.sort(key=lambda row: (row["date"], row["time"], row["_sort_key"]))
     for row in records:
         row.pop("_sort_key", None)
+        utr = row.pop("_utr", None)
+        txn_id = row.pop("_txn_id", None)
+        # Surface the refs as top-level fields only when asked (global opt-in) or
+        # for injected rows (always). Otherwise the record keeps its default shape.
+        if config.expose_refs or row.pop("_injected", False):
+            row["utr"] = utr
+            row["txn_id"] = txn_id
     return records
 
 
@@ -936,6 +1028,8 @@ def _config_from_options(
     country: str | None = None,
     currency: str | None = None,
     today: date | None = None,
+    expose_refs: bool = False,
+    inject: Iterable["InjectedRow | dict"] | None = None,
 ) -> RunConfig:
     """Resolve library options into a :class:`RunConfig` — non-interactive, pure."""
     today = today or datetime.now().date()
@@ -960,6 +1054,9 @@ def _config_from_options(
             start_date = _rolling_start(end_date, resolved_period)
     currency_key = _validate_currency(currency) if currency else COUNTRY_DEFAULT_CURRENCY[country_key]
     cur = _resolve_currency(currency_key)
+    injected = tuple(
+        row if isinstance(row, InjectedRow) else InjectedRow(**row) for row in (inject or ())
+    )
     return RunConfig(
         start_date=start_date,
         end_date=end_date,
@@ -970,6 +1067,8 @@ def _config_from_options(
         bank=_choose_bank(False, bank),
         country=country_key,
         currency=currency_key,
+        expose_refs=expose_refs,
+        inject=injected,
     )
 
 
@@ -987,6 +1086,8 @@ def generate(
     country: str | None = None,
     currency: str | None = None,
     today: date | None = None,
+    expose_refs: bool = False,
+    inject: Iterable["InjectedRow | dict"] | None = None,
 ) -> Statement:
     """Generate a synthetic statement in memory — the library entry point.
 
@@ -1001,11 +1102,23 @@ def generate(
 
     The CLI (:func:`main`) and any programmatic caller (a consumer app, the
     in-browser Pyodide UI) share this one path, so they can never diverge.
+
+    Two opt-in affordances exist for building deterministic **test fixtures**;
+    both leave the default output shape untouched:
+
+    - ``expose_refs`` — surface each record's ``utr``/``txn_id`` as top-level JSON
+      fields (they otherwise live only inside the detail block), so a test can read
+      a seeded run's rail refs back without parsing.
+    - ``inject`` — a sequence of :class:`InjectedRow` (or equivalent dicts) appended
+      to the generated set. Its main use is emitting two rows that *deliberately
+      share one ``utr``*: a re-uploaded duplicate, or a self-transfer's two legs
+      (opposite directions, same UTR). Injected rows always carry their refs in JSON.
     """
     config = _config_from_options(
         seed=seed, start=start, end=end, range=range, period=period,
         profile=profile, bank=bank, income=income, expense=expense,
         country=country, currency=currency, today=today,
+        expose_refs=expose_refs, inject=inject,
     )
     records = _generate_records(config)
     return Statement(records=records, meta=_build_meta(config, records))
