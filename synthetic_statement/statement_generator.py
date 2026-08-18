@@ -278,8 +278,9 @@ class InjectedRow:
     Injected rows always surface ``utr``/``txn_id`` in the JSON records regardless
     of ``expose_refs``.
 
-    ``ref`` (a reconcile reference echoed into the payee region) is reserved for a
-    later scope and raises if used — see ``.scratch/tasks/emit-matchable-rail-ref.md``.
+    ``ref`` (a reconcile reference echoed into the payee region) is reserved and
+    not yet implemented — it raises if used. The surviving payee-region form has to
+    be pinned against the consuming parser's shredder before it can be wired.
     """
 
     direction: str  # "debit" | "credit"
@@ -886,8 +887,8 @@ def _build_injected_rows(
     for order, spec in enumerate(config.inject, start=1):
         if spec.ref is not None:
             raise NotImplementedError(
-                "InjectedRow.ref (reconcile-ref echo) is deferred to a later scope; "
-                "see .scratch/tasks/emit-matchable-rail-ref.md"
+                "InjectedRow.ref (reconcile-ref echo) is reserved and not yet "
+                "implemented; pass utr/txn_id instead"
             )
         if spec.direction not in ("debit", "credit"):
             raise ValueError(f"InjectedRow.direction must be 'debit'/'credit', got {spec.direction!r}")
