@@ -16,7 +16,7 @@ pip install -e ".[pdf,dev]"   # core is pure-stdlib; [pdf]=reportlab, [dev]=pyte
 ./selftest.sh                 # end-to-end smoke (generate + verify)
 ```
 
-### Browser demo (`docs/`)
+### Browser demo (`site/`)
 
 The hosted demo runs the generator in-browser via Pyodide. A browser smoke test
 drives the real page (modal flow → JSON/CSV/PDF generation) and validates the
@@ -30,7 +30,7 @@ npm run test:e2e              # needs a Chrome/Chromium + network (CDN); ~2–4 
 
 It uses a system Chrome (auto-detected, or set `CHROME_PATH`). It's a manual
 pre-deploy check, **not** a per-push CI gate — the ~10 MB Pyodide download makes
-it too slow to run on every commit. The deployed site is static `docs/` only;
+it too slow to run on every commit. The deployed site is static `site/` only;
 `node_modules/` never ships.
 
 ## Conventions

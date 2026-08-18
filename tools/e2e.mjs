@@ -1,9 +1,9 @@
-/* End-to-end smoke test for the browser demo (docs/).
+/* End-to-end smoke test for the browser demo (site/).
  *
  *   npm install           # installs puppeteer-core (devDep)
  *   npm run test:e2e       # drives a real browser through JSON/CSV/PDF generations
  *
- * It self-serves docs/ from Node, opens the page in Chrome, walks the modal
+ * It self-serves site/ from Node, opens the page in Chrome, walks the modal
  * flow for each output format, and validates the ACTUAL downloaded bytes
  * (JSON parses, CSV has a header row, PDF has a %PDF- header). This exercises
  * the browser layer the pytest suite can't: the Pyodide runtime load, the wheel
@@ -20,7 +20,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const DOCS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "docs");
+const DOCS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "site");
 const PORT = Number(process.env.PORT) || 8092;
 const MIME = {
   ".html": "text/html", ".css": "text/css", ".js": "text/javascript",
